@@ -8,13 +8,13 @@ This is to synchronize Wyze devices for rental use.
 
 For first time run of any scripts use
 
-<code>
-chmod +x ./scripts/filename.sh
-</code>
+```
+chmod +x ./scripts/<filename>.sh
+```
 
 ### Setup Enviorment
 
-<code>
+```
 python3 -m venv .venv
 . .venv/bin/activate
-</code>
+```
