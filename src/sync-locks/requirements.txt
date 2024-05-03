@@ -1,0 +1,4 @@
+# Do not include azure-functions-worker as it may conflict with the Azure Functions platform
+
+azure-functions
+wyze-sdk==2.1.0
