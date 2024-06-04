@@ -20,7 +20,7 @@ resource "azurerm_key_vault_access_policy" "access_policy_sync_locks_job" {
   object_id    = azurerm_user_assigned_identity.functions.principal_id
 
   secret_permissions = [
-    "get"
+    "Get"
   ]
 }
 
@@ -30,7 +30,7 @@ resource "azurerm_key_vault_access_policy" "access_policy_sync_locks_trigger" {
   object_id    = azurerm_user_assigned_identity.functions.principal_id
 
   secret_permissions = [
-    "get"
+    "Get"
   ]
 }
 
