@@ -22,13 +22,13 @@ resource "azurerm_user_assigned_identity" "functions" {
   resource_group_name = azurerm_resource_group.rg.name
 }
 
-resource "azurerm_key_vault_access_policy" "john" {
+resource "azurerm_key_vault_access_policy" "admin" {
   key_vault_id = azurerm_key_vault.key_vault.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = var.AAD_ObjectId.JohnBaczkowski
+  object_id    = var.aad_objectId_admin
 
   secret_permissions = [
-    "get", "list", "set", "delete", "recover", "backup", "restore", "purge"
+    "Get", "List", "Set", "Delete", "Recover", "Backup", "Restore", "Purge"
   ]
 }
 
