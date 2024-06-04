@@ -39,3 +39,38 @@ variable "test_property_name" {
   default = "Paradise Cove Enchanted Oaks - FD"
   type = string
 }
+
+variable "hospitable_email" {
+  description = "Hospitable email"
+  type        = string
+}
+
+variable "hospitable_password" {
+  description = "Hospitable password"
+  type        = string
+}
+
+variable "wyze_email" {
+  description = "Wyze email"
+  type        = string
+}
+
+variable "wyze_password" {
+  description = "Wyze password"
+  type        = string
+}
+
+variable "wyze_key_id" {
+  description = "Wyze key ID"
+  type        = string
+}
+
+variable "wyze_api_key" {
+  description = "Wyze API key"
+  type        = string
+}
+
+variable "slack_token" {
+  description = "Slack token"
+  type        = string
+}

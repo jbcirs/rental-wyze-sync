@@ -17,6 +17,14 @@ jobs:
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+      TF_VAR_hospitable_email: ${{ secrets.HOSPITABLE_EMAIL }}
+      TF_VAR_hospitable_password: ${{ secrets.HOSPITABLE_PASSWORD }}
+      TF_VAR_wyze_email: ${{ secrets.WYZE_EMAIL }}
+      TF_VAR_wyze_password: ${{ secrets.WYZE_PASSWORD }}
+      TF_VAR_wyze_key_id: ${{ secrets.WYZE_KEY_ID }}
+      TF_VAR_wyze_api_key: ${{ secrets.WYZE_API_KEY }}
+      TF_VAR_slack_token: ${{ secrets.SLACK_TOKEN }}
+
 
     steps:
       - name: Checkout code
