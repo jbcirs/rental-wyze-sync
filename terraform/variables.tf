@@ -4,24 +4,13 @@ variable "resource_name" {
   type        = string
 }
 
-
-variable "subscription_id" {
-  description = "The Subscription ID of the Azure subscription"
+variable "terraform_resource_group_name" {
+  description = "Terraform Resource group name"
   type = string
 }
 
-variable "client_id" {
-  description = "The Client ID of the Azure Active Directory Application"
-  type = string
-}
-
-variable "client_secret" {
-  description = "The Client Secret of the Azure Active Directory Application"
-  type = string
-}
-
-variable "tenant_id" {
-  description = "The Tenant ID of the Azure Active Directory"
+variable "terraform_storage_account_name" {
+  description = "Terraform storge account"
   type = string
 }
 

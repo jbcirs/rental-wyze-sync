@@ -13,14 +13,15 @@ provider "azurerm" {
        prevent_deletion_if_contains_resources = false
      }
   }
-
-  subscription_id = var.subscription_id
-  client_id       = var.client_id
-  client_secret   = var.client_secret
-  tenant_id       = var.tenant_id
 }
 
 data "azurerm_client_config" "current" {}
 
-
-
+terraform {
+  backend "azurerm" {
+    resource_group_name   = var.terraform_resource_group_name
+    storage_account_name  = var.terraform_storage_account_name
+    container_name        = "tfstate"
+    key                   = "terraform.tfstate"
+  }
+}
