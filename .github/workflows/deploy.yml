@@ -60,13 +60,26 @@ jobs:
             tenant-id: ${{ secrets.AZURE_AD_TENANT_ID }}
             subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }} 
 
-      - name: Get Publish Profile
-        id: getPublishProfile
+      - name: Get Publish Profile Timmer
+        id: getPublishProfileTimmer
         uses: Azure/cli@v1.0.0
         with:
           inlineScript: |
-            az functionapp deployment list-publishing-profiles --name sync-locks-job --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > sync-locks-job.publishsettings
-            az functionapp deployment list-publishing-profiles --name sync-locks-trigger --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > sync-locks-trigger.publishsettings
+            az functionapp deployment list-publishing-profiles --name sync-locks-job --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > sync_locks_job.publishsettings
+            cat sync_locks_job.publishsettings
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+
+      - name: Get Publish Profile HTTP
+        id: getPublishProfileHTTP
+        uses: Azure/cli@v1.0.0
+        with:
+          inlineScript: |
+            az functionapp deployment list-publishing-profiles --name sync-locks-trigger --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > sync_locks_trigger.publishsettings
+            cat sync_locks_trigger.publishsettings
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
@@ -78,11 +91,11 @@ jobs:
         with:
           app-name: sync-locks-function
           package: src/timed_trigger
-          publish-profile: $(cat sync-locks-job.publishsettings)
+          publish-profile: ${{ steps.getPublishProfileTimmer.outputs.sync_locks_job }}
 
       - name: Deploy HTTP Trigger Function
         uses: Azure/functions-action@v1
         with:
           app-name: sync-locks-function
           package: src/http_trigger
-          publish-profile: $(cat sync-locks-trigger.publishsettings)
+          publish-profile: ${{ steps.getPublishProfileHTTP.outputs.sync_locks_trigger }}
