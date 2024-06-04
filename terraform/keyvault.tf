@@ -12,14 +12,9 @@ resource "azurerm_key_vault" "key_vault" {
     object_id = data.azurerm_client_config.current.object_id
 
     secret_permissions = [
-      "Set", "Get", "Delete", "Purge", "List",  ]
+      "Set", "Get", "Delete", "Purge", "List"
+    ]
   }
-}
-
-resource "azurerm_user_assigned_identity" "functions" {
-  name                = "${var.resource_name}-identity"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
 }
 
 resource "azurerm_key_vault_access_policy" "admin" {
@@ -32,10 +27,20 @@ resource "azurerm_key_vault_access_policy" "admin" {
   ]
 }
 
-resource "azurerm_key_vault_access_policy" "functions" {
+resource "azurerm_key_vault_access_policy" "function_timmer" {
   key_vault_id = azurerm_key_vault.key_vault.id
-  tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = azurerm_user_assigned_identity.functions.principal_id
+  tenant_id    = "${azurerm_function_app.sync_locks_job.identity.0.tenant_id}"
+  object_id    = "${azurerm_function_app.sync_locks_job.identity.0.principal_id}"
+
+  secret_permissions = [
+    "Get"
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "function_trigger" {
+  key_vault_id = azurerm_key_vault.key_vault.id
+  tenant_id    = "${azurerm_function_app.sync_locks_trigger.identity.0.tenant_id}"
+  object_id    = "${azurerm_function_app.sync_locks_trigger.identity.0.principal_id}"
 
   secret_permissions = [
     "Get"
