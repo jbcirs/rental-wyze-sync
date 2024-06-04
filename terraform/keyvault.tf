@@ -30,31 +30,31 @@ resource "azurerm_key_vault_secret" "hospitable_password" {
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
-resource "azurerm_key_vault_secret" "hospitable_password" {
+resource "azurerm_key_vault_secret" "wyze_email" {
   name         = "WYZE_EMAIL"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
-resource "azurerm_key_vault_secret" "hospitable_password" {
+resource "azurerm_key_vault_secret" "wyze_password" {
   name         = "WYZE_PASSWORD"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
-resource "azurerm_key_vault_secret" "hospitable_password" {
+resource "azurerm_key_vault_secret" "wyze_key_id" {
   name         = "WYZE_KEY_ID"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
-resource "azurerm_key_vault_secret" "hospitable_password" {
+resource "azurerm_key_vault_secret" "wyze_api_key" {
   name         = "WYZE_API_KEY"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
-resource "azurerm_key_vault_secret" "hospitable_password" {
+resource "azurerm_key_vault_secret" "slack_token" {
   name         = "SLACK_TOKEN"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
