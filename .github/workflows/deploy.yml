@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      ARM_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+      TF_VAR_client_id: ${{ secrets.AZURE_AD_CLIENT_ID }}
+      TF_VAR_client_secret: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
+      TF_VAR_subscription_id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      TF_VAR_tenant_id: ${{ secrets.AZURE_AD_TENANT_ID }}
 
     steps:
       - name: Checkout code
@@ -45,7 +45,7 @@ jobs:
         uses: Azure/cli@v1.0.0
         with:
           inlineScript: |
-            az functionapp deployment list-publishing-profiles --name example-function --resource-group example-resources --output json > publishProfile.json
+            az functionapp deployment list-publishing-profiles --name sync-locks-function --resource-group sync-locks --output json > publishProfile.json
             cat publishProfile.json
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -56,13 +56,13 @@ jobs:
       - name: Deploy Timed Trigger Function
         uses: Azure/functions-action@v1
         with:
-          app-name: example-function
+          app-name: sync-locks-function
           package: src/timed_trigger
           publish-profile: ${{ steps.getPublishProfile.outputs.publishProfile }}
 
       - name: Deploy HTTP Trigger Function
         uses: Azure/functions-action@v1
         with:
-          app-name: example-function
+          app-name: sync-locks-function
           package: src/http_trigger
           publish-profile: ${{ steps.getPublishProfile.outputs.publishProfile }}

@@ -14,6 +14,12 @@ resource "azurerm_function_app" "sync_locks_job" {
   app_settings = {
     FUNCTIONS_WORKER_RUNTIME = "python"
     VAULT_URL = azurerm_key_vault.key_vault.vault_uri
+    SLACK_CHANNEL = var.slack_channel
+    DELETE_ALL_GUEST_CODES = var.delete_all_guest_codes
+    CHECK_IN_OFFSET_HOURS = var.check_in_offset_hours
+    CHECK_OUT_OFFSET_HOURS = var.check_out_offset_hours
+    TEST = var.test
+    TEST_PROPERTY_NAME = var.test_property_name
   }
 }
 
@@ -34,5 +40,11 @@ resource "azurerm_function_app" "sync_locks_trigger" {
   app_settings = {
     FUNCTIONS_WORKER_RUNTIME = "python"
     VAULT_URL = azurerm_key_vault.key_vault.vault_uri
+    SLACK_CHANNEL = var.slack_channel
+    DELETE_ALL_GUEST_CODES = var.delete_all_guest_codes
+    CHECK_IN_OFFSET_HOURS = var.check_in_offset_hours
+    CHECK_OUT_OFFSET_HOURS = var.check_out_offset_hours
+    TEST = var.test
+    TEST_PROPERTY_NAME = var.test_property_name
   }
 }
