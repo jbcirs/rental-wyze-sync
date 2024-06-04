@@ -1,4 +1,4 @@
-resource "azurerm_function_app" "function" {
+resource "azurerm_function_app" "function_job" {
   name                       = "${var.resource_name}-job"
   location                   = azurerm_resource_group.rg.location
   resource_group_name        = azurerm_resource_group.rg.name
@@ -17,7 +17,7 @@ resource "azurerm_function_app" "function" {
   }
 }
 
-resource "azurerm_function_app" "function" {
+resource "azurerm_function_app" "function_trigger" {
   name                       = "${var.resource_name}-trigger"
   location                   = azurerm_resource_group.rg.location
   resource_group_name        = azurerm_resource_group.rg.name
