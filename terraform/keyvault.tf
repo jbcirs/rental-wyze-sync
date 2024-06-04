@@ -16,20 +16,20 @@ resource "azurerm_key_vault" "key_vault" {
   }
 }
 
+resource "azurerm_user_assigned_identity" "functions" {
+  name                = "${var.resource_name}-identity"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
 resource "azurerm_key_vault_access_policy" "john" {
-  key_vault_id = azurerm_key_vault.keyvault.id
+  key_vault_id = azurerm_key_vault.key_vault.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
   object_id    = var.AAD_ObjectId.JohnBaczkowski
 
   secret_permissions = [
     "get", "list", "set", "delete", "recover", "backup", "restore", "purge"
   ]
-}
-
-resource "azurerm_user_assigned_identity" "functions" {
-  name                = "${var.resource_name}-identity"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
 }
 
 resource "azurerm_key_vault_access_policy" "access_policy_sync_locks_job" {
