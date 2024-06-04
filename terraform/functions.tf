@@ -14,6 +14,9 @@ resource "azurerm_function_app" "sync_locks_job" {
   }
 
   app_settings = {
+    "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.app_insights.instrumentation_key
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
+    "ApplicationInsightsAgent_EXTENSION_VERSION" = "~2"
     FUNCTIONS_WORKER_RUNTIME = "python"
     VAULT_URL = azurerm_key_vault.key_vault.vault_uri
     SLACK_CHANNEL = var.slack_channel
@@ -41,6 +44,9 @@ resource "azurerm_function_app" "sync_locks_trigger" {
   }
 
   app_settings = {
+    "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.app_insights.instrumentation_key
+    "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
+    "ApplicationInsightsAgent_EXTENSION_VERSION" = "~2"
     FUNCTIONS_WORKER_RUNTIME = "python"
     VAULT_URL = azurerm_key_vault.key_vault.vault_uri
     SLACK_CHANNEL = var.slack_channel
