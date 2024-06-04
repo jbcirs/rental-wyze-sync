@@ -17,8 +17,6 @@ jobs:
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       ARM_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
-      TF_VAR_terraform_resource_group_name: ${{ secrets.RESOURCE_GROUP }}
-      TF_VAR_terraform_storage_account_name: ${{ secrets.STORAGE_ACCOUNT }}
 
     steps:
       - name: Checkout code

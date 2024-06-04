@@ -4,16 +4,6 @@ variable "resource_name" {
   type        = string
 }
 
-variable "terraform_resource_group_name" {
-  description = "Terraform Resource group name"
-  type = string
-}
-
-variable "terraform_storage_account_name" {
-  description = "Terraform storge account"
-  type = string
-}
-
 variable "slack_channel" {
   description = "The slack channel"
   default = "#notifications"

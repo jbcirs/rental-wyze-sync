@@ -19,8 +19,8 @@ data "azurerm_client_config" "current" {}
 
 terraform {
   backend "azurerm" {
-    resource_group_name   = var.terraform_resource_group_name
-    storage_account_name  = var.terraform_storage_account_name
+    resource_group_name   = "terraform"
+    storage_account_name  = "terraformsgithub"
     container_name        = "tfstate"
     key                   = "terraform.tfstate"
   }
