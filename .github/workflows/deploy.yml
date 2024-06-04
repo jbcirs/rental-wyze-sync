@@ -1,0 +1,65 @@
+name: Azure Function CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r function/requirements.txt
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: ./terraform
+
+      - name: Get Publish Profile
+        id: getPublishProfile
+        uses: Azure/cli@v1.0.0
+        with:
+          inlineScript: |
+            az functionapp deployment list-publishing-profiles --name example-function --resource-group example-resources --output json > publishProfile.json
+            cat publishProfile.json
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+
+      - name: Deploy Timed Trigger Function
+        uses: Azure/functions-action@v1
+        with:
+          app-name: example-function
+          package: function/timed_trigger
+          publish-profile: ${{ steps.getPublishProfile.outputs.publishProfile }}
+
+      - name: Deploy HTTP Trigger Function
+        uses: Azure/functions-action@v1
+        with:
+          app-name: example-function
+          package: function/http_trigger
+          publish-profile: ${{ steps.getPublishProfile.outputs.publishProfile }}

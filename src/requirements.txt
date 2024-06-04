@@ -4,3 +4,5 @@ azure-functions
 requests
 wyze-sdk==2.2.0
 slack_sdk==3.27.2
+azure-identity
+azure-keyvault-secrets

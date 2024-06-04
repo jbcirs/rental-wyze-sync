@@ -3,6 +3,8 @@ import os
 import requests
 import re
 from datetime import datetime, timedelta
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 from wyze_sdk import Client
 from wyze_sdk.errors import WyzeApiError
 from wyze_sdk.models.devices.locks import LockKeyPermission, LockKeyPermissionType
@@ -11,19 +13,26 @@ from slack_sdk.errors import SlackApiError
 from error_mapping import get_error_message
 
 # Configuration
-HOSPITABLE_EMAIL = os.environ['HOSPITABLE_EMAIL']
-HOSPITABLE_PASSWORD = os.environ['HOSPITABLE_PASSWORD']
-SLACK_TOKEN = os.environ['SLACK_TOKEN']
+VAULT_URL = os.environ["VAULT_URL"]
 SLACK_CHANNEL = os.environ['SLACK_CHANNEL']
-WYZE_EMAIL = os.environ['WYZE_EMAIL']
-WYZE_PASSWORD = os.environ['WYZE_PASSWORD']
-WYZE_KEY_ID = os.environ['WYZE_KEY_ID']
-WYZE_API_KEY = os.environ['WYZE_API_KEY']
 DELETE_ALL_GUEST_CODES = os.environ.get('DELETE_ALL_GUEST_CODES', 'false').lower() == 'true'
 CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
-CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_OUT_OFFSET_HOURS'])
-TEST = os.environ.get('TEST', 'false').lower() == 'true'
+CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
+TEST =  os.environ.get('TEST', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
+
+# Azure Key Vault client
+credential = DefaultAzureCredential()
+client = SecretClient(vault_url=VAULT_URL, credential=credential)
+
+# Fetch secrets from Key Vault
+HOSPITABLE_EMAIL = client.get_secret("HOSPITABLE_EMAIL").value
+HOSPITABLE_PASSWORD = client.get_secret("HOSPITABLE_PASSWORD").value
+SLACK_TOKEN = client.get_secret("SLACK_TOKEN").value
+WYZE_EMAIL = client.get_secret("WYZE_EMAIL").value
+WYZE_PASSWORD = client.get_secret("WYZE_PASSWORD").value
+WYZE_KEY_ID = client.get_secret("WYZE_KEY_ID").value
+WYZE_API_KEY = client.get_secret("WYZE_API_KEY").value
 
 
 # Initialize Slack client

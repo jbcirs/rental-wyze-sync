@@ -1,14 +1,26 @@
 #!/bin/bash
 
-export WYZE_ACCESS_TOKEN="your_access_token_here"
+export HOSPITABLE_EMAIL=""
+export HOSPITABLE_PASSWORD=""
+export WYZE_EMAIL=""
+export WYZE_PASSWORD=""
+export WYZE_KEY_ID=""
+export WYZE_API_KEY=""
+export SLACK_TOKEN="xoxb-1234"
+export SLACK_CHANNEL="#notifications"
+export DELETE_ALL_GUEST_CODES=False
+export CHECK_IN_OFFSET_HOURS=-1
+export CHECK_OUT_OFFSET_HOURS=1
+export TEST=True
+export TEST_PROPERTY_NAME="House - FD"
+
+
+
 
 cd ..
-cd src/sync-locks/
+cd src/
 
 pip3 install -r requirements.txt --upgrade --force-reinstall
 
-cd sync-locks-function/
-
-# Run the Python script
-#python3 ./timer_function.py
+python3 ./lock-sync.py
 
