@@ -48,6 +48,13 @@ jobs:
         run: terraform apply -auto-approve
         working-directory: ./terraform
 
+      - name: 'Az CLI login'
+        uses: azure/login@v1
+        with:
+            client-id: ${{ secrets.AZURE_AD_CLIENT_ID }}
+            tenant-id: ${{ secrets.AZURE_AD_TENANT_ID }}
+            subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }} 
+
       - name: Get Publish Profile
         id: getPublishProfile
         uses: Azure/cli@v1.0.0
