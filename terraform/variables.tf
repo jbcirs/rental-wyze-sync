@@ -74,3 +74,11 @@ variable "slack_token" {
   description = "Slack token"
   type        = string
 }
+
+variable "AAD_ObjectId" {
+  description    = "Map of AAD Object Ids for Policies"
+  type           = map
+  default        = {
+    JohnBaczkowski   = "d75a0f43-7b4d-4c6a-b03a-05e396a6b200"
+  }
+}
