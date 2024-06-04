@@ -20,6 +20,8 @@ WYZE_PASSWORD = os.environ['WYZE_PASSWORD']
 WYZE_KEY_ID = os.environ['WYZE_KEY_ID']
 WYZE_API_KEY = os.environ['WYZE_API_KEY']
 DELETE_ALL_GUEST_CODES = os.environ.get('DELETE_ALL_GUEST_CODES', 'false').lower() == 'true'
+CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
+CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_OUT_OFFSET_HOURS'])
 TEST = os.environ.get('TEST', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 
@@ -77,7 +79,7 @@ def process_reservations():
                 send_slack_message(f"Unable to fetch lock codes for {lock_name}.")
                 continue
 
-            locks_client._user_id = get_user_id_from_existing_codes(existing_codes,locks_client._user_id)
+            locks_client._user_id = get_user_id_from_existing_codes(existing_codes, locks_client._user_id)
 
             if locks_client._user_id is None:
                 send_slack_message(f":4934-error: Unable to find user_id")
@@ -102,8 +104,8 @@ def process_reservations():
                 phone_last4 = reservation['phone'][-4:]
                 label = f"Guest {guest_first_name}"
                 label += f" {reservation['checkin'][:10].replace('-', '')}"
-                checkin_time = format_datetime(reservation['checkin'], offset_hours=-1)
-                checkout_time = format_datetime(reservation['checkout'], offset_hours=1)
+                checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS)
+                checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS)
 
                 permission = LockKeyPermission(
                     type=LockKeyPermissionType.DURATION, 
@@ -187,12 +189,10 @@ def get_lock_info(locks_client, lock_name):
 
 def get_lock_codes(locks_client, lock_mac):
     try:
-        locks_client.get_keys(device_mac=lock_mac)
         return locks_client.get_keys(device_mac=lock_mac)
     except WyzeApiError as e:
         logging.error(f"Error retrieving lock codes for {lock_mac}: {str(e)}")
         return None
-
 
 def label_exists(existing_codes, label):
     print(f"label: {label} result: {any(c.name == label for c in existing_codes)}")
@@ -200,37 +200,43 @@ def label_exists(existing_codes, label):
 
 def add_lock_code(locks_client, lock_mac, code, label, permission):
     try:
-        output = locks_client.create_access_code(
+        response = locks_client.create_access_code(
             device_mac=lock_mac, 
             access_code=code, 
             name=label, 
             permission=permission
         )
-        print(f"output: {output}")
+        if response['ErrNo'] != 0:
+            raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+        print(f"output: {response}")
     except WyzeApiError as e:
         logging.error(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
         send_slack_message(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
 
 def update_lock_code(locks_client, lock_mac, code_id, code, label, permission):
     try:
-        output = locks_client.update_access_code(
+        response = locks_client.update_access_code(
             device_mac=lock_mac, 
             access_code_id=code_id, 
             access_code=code, 
             name=label, 
             permission=permission
         )
-        print(f"output: {output}")
+        if response['ErrNo'] != 0:
+            raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+        print(f"output: {response}")
     except WyzeApiError as e:
         logging.error(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
         send_slack_message(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
 
 def delete_lock_code(locks_client, lock_mac, code_id):
     try:
-        locks_client.delete_access_code(
+        response = locks_client.delete_access_code(
             device_mac=lock_mac, 
             access_code_id=code_id
         )
+        if response['ErrNo'] != 0:
+            raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
     except WyzeApiError as e:
         logging.error(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
         send_slack_message(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
@@ -262,7 +268,6 @@ def get_user_id_from_existing_codes(existing_codes, user_id=None):
             return code.userid
 
     return user_id
-
 
 if __name__ == "__main__":
     process_reservations()
