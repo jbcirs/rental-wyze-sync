@@ -114,13 +114,13 @@ def process_reservations():
                 )
 
                 if not label_exists(existing_codes, label):
-                    print(f"ADD: {property_name}; label: {label}")
+                    logging.info(f"ADD: {property_name}; label: {label}")
                     add_lock_code(locks_client, lock_mac, phone_last4, label, permission)
                     additions.append(label)
                 else:
                     update_code = next((c for c in existing_codes if c.name == label), None)
                     if update_code:
-                        print(f"UPDATE: {property_name}; label: {label}")
+                        logging.info(f"UPDATE: {property_name}; label: {label}")
                         update_lock_code(locks_client, lock_mac, update_code.id, phone_last4, label, permission)
                         updates.append(label)
 
@@ -195,7 +195,6 @@ def get_lock_codes(locks_client, lock_mac):
         return None
 
 def label_exists(existing_codes, label):
-    print(f"label: {label} result: {any(c.name == label for c in existing_codes)}")
     return any(c.name == label for c in existing_codes)
 
 def add_lock_code(locks_client, lock_mac, code, label, permission):
@@ -208,7 +207,7 @@ def add_lock_code(locks_client, lock_mac, code, label, permission):
         )
         if response['ErrNo'] != 0:
             raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
-        print(f"output: {response}")
+        logging.info(f"{response}")
     except WyzeApiError as e:
         logging.error(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
         send_slack_message(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
@@ -224,7 +223,7 @@ def update_lock_code(locks_client, lock_mac, code_id, code, label, permission):
         )
         if response['ErrNo'] != 0:
             raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
-        print(f"output: {response}")
+        logging.info(f"{response}")
     except WyzeApiError as e:
         logging.error(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
         send_slack_message(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
@@ -237,6 +236,7 @@ def delete_lock_code(locks_client, lock_mac, code_id):
         )
         if response['ErrNo'] != 0:
             raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+        logging.info(f"{response}")
     except WyzeApiError as e:
         logging.error(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
         send_slack_message(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
