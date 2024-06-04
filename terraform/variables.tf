@@ -76,6 +76,6 @@ variable "slack_token" {
 }
 
 variable "aad_objectId_admin" {
-  description    = "Map of AAD Object Ids for Policies"
-  type           = map
+  description    = "AAD Object Id for Policies"
+  type           = string
 }
