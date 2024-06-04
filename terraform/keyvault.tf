@@ -8,10 +8,20 @@ resource "azurerm_key_vault" "key_vault" {
   purge_protection_enabled    = false
 }
 
-resource "azurerm_key_vault_access_policy" "access_policy" {
+resource "azurerm_key_vault_access_policy" "access_policy_sync_locks_job" {
   key_vault_id = azurerm_key_vault.key_vault.id
   tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = azurerm_function_app.function.identity[0].principal_id
+  object_id    = azurerm_function_app.sync_locks_job.identity[0].principal_id
+
+  secret_permissions = [
+    "get",
+  ]
+}
+
+resource "azurerm_key_vault_access_policy" "access_policy_sync_locks_trigger" {
+  key_vault_id = azurerm_key_vault.key_vault.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = azurerm_function_app.sync_locks_trigger.identity[0].principal_id
 
   secret_permissions = [
     "get",
@@ -19,43 +29,43 @@ resource "azurerm_key_vault_access_policy" "access_policy" {
 }
 
 resource "azurerm_key_vault_secret" "hospitable_email" {
-  name         = "HOSPITABLE_EMAIL"
+  name         = "HOSPITABLE-EMAIL"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
 resource "azurerm_key_vault_secret" "hospitable_password" {
-  name         = "HOSPITABLE_PASSWORD"
+  name         = "HOSPITABLE-PASSWORD"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
 resource "azurerm_key_vault_secret" "wyze_email" {
-  name         = "WYZE_EMAIL"
+  name         = "WYZE-EMAIL"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
 resource "azurerm_key_vault_secret" "wyze_password" {
-  name         = "WYZE_PASSWORD"
+  name         = "WYZE-PASSWORD"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
 resource "azurerm_key_vault_secret" "wyze_key_id" {
-  name         = "WYZE_KEY_ID"
+  name         = "WYZE-KEY-ID"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
 resource "azurerm_key_vault_secret" "wyze_api_key" {
-  name         = "WYZE_API_KEY"
+  name         = "WYZE-API-KEY"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
 
 resource "azurerm_key_vault_secret" "slack_token" {
-  name         = "SLACK_TOKEN"
+  name         = "SLACK-TOKEN"
   value        = "your_secret"
   key_vault_id = azurerm_key_vault.key_vault.id
 }
