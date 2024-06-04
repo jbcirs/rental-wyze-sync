@@ -1,1 +1,8 @@
-.venv
+# Below are the files and directories to ignore when deploying your function app.
+__pycache__/
+*.pyc
+.venv/
+env/
+.vscode/
+.git/
+.gitignore
