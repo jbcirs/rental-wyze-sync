@@ -14,7 +14,7 @@ resource "azurerm_key_vault_access_policy" "access_policy_sync_locks_job" {
   object_id    = azurerm_function_app.sync_locks_job.identity[0].principal_id
 
   secret_permissions = [
-    "get",
+    "Get",
   ]
 }
 
@@ -24,7 +24,7 @@ resource "azurerm_key_vault_access_policy" "access_policy_sync_locks_trigger" {
   object_id    = azurerm_function_app.sync_locks_trigger.identity[0].principal_id
 
   secret_permissions = [
-    "get",
+    "Get",
   ]
 }
 
