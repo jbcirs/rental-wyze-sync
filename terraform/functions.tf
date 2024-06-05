@@ -29,7 +29,7 @@ resource "azurerm_function_app" "sync_locks_job" {
 
   depends_on = [
     azurerm_application_insights.app_insights,
-    azurerm_service_plan.service_plan
+    azurerm_app_service_plan.app_service_plan
   ]
 }
 
@@ -64,6 +64,6 @@ resource "azurerm_function_app" "sync_locks_trigger" {
 
   depends_on = [
     azurerm_application_insights.app_insights,
-    azurerm_service_plan.service_plan
+    azurerm_app_service_plan.app_service_plan
   ]
 }
