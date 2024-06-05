@@ -89,18 +89,19 @@ jobs:
       - name: Archive functions
         run: |
           cd src
-          zip -r ../functions.zip . -x '*.git*' -x '*.vscode*'
+          zip -r ../sync-locks-job.zip . -x '*.git*' -x '*.vscode*'  -x 'sync-locks-trigger.py'
+          zip -r ../sync-locks-trigger.zip . -x '*.git*' -x '*.vscode*'  -x 'sync-locks-job.py'
       
       - name: Deploy Timed Trigger Function
         uses: Azure/functions-action@v1
         with:
           app-name: sync-locks-job
-          package: functions.zip
+          package: sync-locks-job.zip
           publish-profile: ${{ steps.getPublishProfileTimmer.outputs.sync_locks_job }}
 
       - name: Deploy HTTP Trigger Function
         uses: Azure/functions-action@v1
         with:
           app-name: sync-locks-trigger
-          package: functions.zip
+          package: sync-locks-trigger.zip
           publish-profile: ${{ steps.getPublishProfileHTTP.outputs.sync_locks_trigger }}
