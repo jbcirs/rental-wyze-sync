@@ -1,9 +1,13 @@
 import logging
-import os
 import azure.functions as func
-from ..lock_sync import process_reservations
+import os
+from lock_sync import process_reservations
 
-def main(req: func.HttpRequest) -> func.HttpResponse:
+app = func.FunctionApp()
+
+@app.function_name(name="sync-locks-trigger")
+@app.route(route="trigger", methods=["POST"])
+def HttpTriggerFunction(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
     delete_all_guest_codes = req.params.get('DELETE_ALL_GUEST_CODES')
