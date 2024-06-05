@@ -86,19 +86,21 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
 
-      - name: Archive functions Zip
-        run: zip -r functions.zip . -x '*.git*' -x '*.vscode*'
+      - name: Archive functions
+        run: |
+          cd src
+          zip -r ../functionapp.zip . -x '*.git*' -x '*.vscode*'
       
       - name: Deploy Timed Trigger Function
         uses: Azure/functions-action@v1
         with:
           app-name: sync-locks-job
-          package: src/functions.zip
+          package: functions.zip
           publish-profile: ${{ steps.getPublishProfileTimmer.outputs.sync_locks_job }}
 
       - name: Deploy HTTP Trigger Function
         uses: Azure/functions-action@v1
         with:
           app-name: sync-locks-trigger
-          package: src/functions.zip
+          package: functions.zip
           publish-profile: ${{ steps.getPublishProfileHTTP.outputs.sync_locks_trigger }}
