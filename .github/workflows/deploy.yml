@@ -89,7 +89,7 @@ jobs:
       - name: Archive functions
         run: |
           cd src
-          zip -r ../functionapp.zip . -x '*.git*' -x '*.vscode*'
+          zip -r ../functions.zip . -x '*.git*' -x '*.vscode*'
       
       - name: Deploy Timed Trigger Function
         uses: Azure/functions-action@v1
