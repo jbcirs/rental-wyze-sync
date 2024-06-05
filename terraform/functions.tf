@@ -6,7 +6,7 @@ resource "azurerm_function_app" "sync_locks_job" {
   storage_account_name       = azurerm_storage_account.storage.name
   storage_account_access_key = azurerm_storage_account.storage.primary_access_key
   os_type                    = "linux"
-  version                    = "~3"
+  version                    = "~4"
   https_only                 = true
 
   identity {
@@ -36,7 +36,7 @@ resource "azurerm_function_app" "sync_locks_trigger" {
   storage_account_name       = azurerm_storage_account.storage.name
   storage_account_access_key = azurerm_storage_account.storage.primary_access_key
   os_type                    = "linux"
-  version                    = "~3"
+  version                    = "~4"
   https_only                 = true
 
   identity {
