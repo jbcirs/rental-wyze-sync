@@ -2,7 +2,7 @@ resource "azurerm_function_app" "sync_locks_job" {
   name                       = "${var.resource_name}-job"
   location                   = azurerm_resource_group.rg.location
   resource_group_name        = azurerm_resource_group.rg.name
-  app_service_plan_id        = azurerm_app_service_plan.app_service_plan.id
+  app_service_plan_id        = azurerm_service_plan.app_service_plan.id
   storage_account_name       = azurerm_storage_account.storage.name
   storage_account_access_key = azurerm_storage_account.storage.primary_access_key
   os_type                    = "linux"
@@ -29,7 +29,7 @@ resource "azurerm_function_app" "sync_locks_job" {
 
   depends_on = [
     azurerm_application_insights.app_insights,
-    azurerm_app_service_plan.app_service_plan
+    azurerm_service_plan.app_service_plan
   ]
 }
 
@@ -37,7 +37,7 @@ resource "azurerm_function_app" "sync_locks_trigger" {
   name                       = "${var.resource_name}-trigger"
   location                   = azurerm_resource_group.rg.location
   resource_group_name        = azurerm_resource_group.rg.name
-  app_service_plan_id        = azurerm_app_service_plan.app_service_plan.id
+  app_service_plan_id        = azurerm_service_plan.app_service_plan.id
   storage_account_name       = azurerm_storage_account.storage.name
   storage_account_access_key = azurerm_storage_account.storage.primary_access_key
   os_type                    = "linux"
@@ -64,6 +64,6 @@ resource "azurerm_function_app" "sync_locks_trigger" {
 
   depends_on = [
     azurerm_application_insights.app_insights,
-    azurerm_app_service_plan.app_service_plan
+    azurerm_service_plan.app_service_plan
   ]
 }
