@@ -5,7 +5,7 @@ from lock_sync import process_reservations
 
 app = func.FunctionApp()
 
-@app.function_name(name="sync-locks-trigger")
+@app.function_name(name="sync-locks-http-trigger")
 @app.route(route="trigger", methods=["POST"])
 def HttpTriggerFunction(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')

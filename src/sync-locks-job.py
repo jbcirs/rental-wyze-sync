@@ -4,7 +4,7 @@ from lock_sync import process_reservations
 
 app = func.FunctionApp()
 
-@app.function_name(name="sync-locks-job")
+@app.function_name(name="sync-locks-timer-trigger")
 @app.schedule(schedule="0 * * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
 def TimerTriggerFunction(mytimer: func.TimerRequest) -> None:
     logging.info('Python timer trigger function executed at %s', mytimer)
