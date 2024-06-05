@@ -12,8 +12,6 @@ resource "azurerm_linux_function_app" "sync_locks_job" {
   }
   
   site_config {
-    application_insights_key               = data.azurerm_key_vault_secret.appinsightskey.value
-    application_insights_connection_string = data.azurerm_key_vault_secret.appinsightsconnstr.value
     application_stack {
       python_version = "3.9"
     }
@@ -54,8 +52,6 @@ resource "azurerm_linux_function_app" "sync_locks_trigger" {
   }
 
   site_config {
-    application_insights_key               = data.azurerm_key_vault_secret.appinsightskey.value
-    application_insights_connection_string = data.azurerm_key_vault_secret.appinsightsconnstr.value
     application_stack {
       python_version = "3.9"
     }
