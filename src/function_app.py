@@ -1,12 +1,22 @@
 import logging
-import azure.functions as func
 import os
+import azure.functions as func
 from lock_sync import process_reservations
 
 app = func.FunctionApp()
 
-@app.function_name(name="sync-locks-http-trigger")
-@app.route(route="trigger", methods=["POST"])
+@app.function_name(name="sync-locks-timer")
+@app.schedule(schedule="0 * * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
+def TimerTriggerFunction(mytimer: func.TimerRequest) -> None:
+    logging.info('Python timer trigger function executed at %s', mytimer)
+
+    try:
+        process_reservations()
+    except Exception as e:
+        logging.error(f"Error executing function: {str(e)}")
+
+@app.function_name(name="sync-locks-http")
+@app.route(route="trigger", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def HttpTriggerFunction(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
