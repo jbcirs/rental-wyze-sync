@@ -78,7 +78,7 @@ jobs:
       - name: Archive Functions
         run: |
           cd src
-          zip -r ../functions.zip . -x '*.git*' -x '*.vscode*' -x '*.sh'
+          zip -r ../functions.zip . -x '*.git*' -x '*.vscode*' -x '*.sh' -x '*.publishsettings'
       
       - name: Deploy Functions
         uses: Azure/functions-action@v1
