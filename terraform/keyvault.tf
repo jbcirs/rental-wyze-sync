@@ -27,20 +27,10 @@ resource "azurerm_key_vault_access_policy" "admin" {
   ]
 }
 
-resource "azurerm_key_vault_access_policy" "sync_locks_job_access_policy" {
+resource "azurerm_key_vault_access_policy" "sync_locks_functions_access_policy" {
   key_vault_id = azurerm_key_vault.key_vault.id
-  tenant_id    = azurerm_linux_function_app.sync_locks_job.identity.0.tenant_id
-  object_id    = azurerm_linux_function_app.sync_locks_job.identity.0.principal_id
-
-  secret_permissions = [
-    "Get"
-  ]
-}
-
-resource "azurerm_key_vault_access_policy" "sync_locks_trigger_access_policy" {
-  key_vault_id = azurerm_key_vault.key_vault.id
-  tenant_id    = azurerm_linux_function_app.sync_locks_trigger.identity.0.tenant_id
-  object_id    = azurerm_linux_function_app.sync_locks_trigger.identity.0.principal_id
+  tenant_id    = azurerm_linux_function_app.sync_locks_functions.identity.0.tenant_id
+  object_id    = azurerm_linux_function_app.sync_locks_functions.identity.0.principal_id
 
   secret_permissions = [
     "Get"

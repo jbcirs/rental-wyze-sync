@@ -42,8 +42,9 @@ jobs:
 
       - name: Install dependencies
         run: |
+          cd src
           python -m pip install --upgrade pip
-          pip install -r src/requirements.txt
+          pip install -r requirements.txt
 
       - name: Terraform Init
         run: terraform init
@@ -60,26 +61,13 @@ jobs:
             tenant-id: ${{ secrets.AZURE_AD_TENANT_ID }}
             subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }} 
 
-      - name: Get Publish Profile Timmer
+      - name: Get Publish Profile
         id: getPublishProfileTimmer
         uses: Azure/cli@v1.0.0
         with:
           inlineScript: |
-            az functionapp deployment list-publishing-profiles --name sync-locks-job --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > sync_locks_job.publishsettings
-            cat sync_locks_job.publishsettings
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
-
-      - name: Get Publish Profile HTTP
-        id: getPublishProfileHTTP
-        uses: Azure/cli@v1.0.0
-        with:
-          inlineScript: |
-            az functionapp deployment list-publishing-profiles --name sync-locks-trigger --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > sync_locks_trigger.publishsettings
-            cat sync_locks_trigger.publishsettings
+            az functionapp deployment list-publishing-profiles --name sync_locks_functions --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > functions.publishsettings
+            cat functions.publishsettings
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
@@ -88,20 +76,11 @@ jobs:
 
       - name: Archive functions
         run: |
-          cd src
-          zip -r ../sync-locks-job.zip . -x '*.git*' -x '*.vscode*'  -x 'sync-locks-trigger.py'
-          zip -r ../sync-locks-trigger.zip . -x '*.git*' -x '*.vscode*'  -x 'sync-locks-job.py'
+          zip -r functions.zip . -x '*.git*' -x '*.vscode*'
       
-      - name: Deploy Timed Trigger Function
+      - name: Deploy Functions
         uses: Azure/functions-action@v1
         with:
-          app-name: sync-locks-job
-          package: sync-locks-job.zip
-          publish-profile: ${{ steps.getPublishProfileTimmer.outputs.sync_locks_job }}
-
-      - name: Deploy HTTP Trigger Function
-        uses: Azure/functions-action@v1
-        with:
-          app-name: sync-locks-trigger
-          package: sync-locks-trigger.zip
-          publish-profile: ${{ steps.getPublishProfileHTTP.outputs.sync_locks_trigger }}
+          app-name: sync-locks-functions
+          package: functions.zip
+          publish-profile: ${{ steps.getPublishProfileTimmer.outputs.functions }}
