@@ -26,6 +26,11 @@ resource "azurerm_function_app" "sync_locks_job" {
     TEST = var.test
     TEST_PROPERTY_NAME = var.test_property_name
   }
+
+  depends_on = [
+    azurerm_application_insights.app_insights,
+    azurerm_service_plan.service_plan
+  ]
 }
 
 resource "azurerm_function_app" "sync_locks_trigger" {
@@ -56,4 +61,9 @@ resource "azurerm_function_app" "sync_locks_trigger" {
     TEST = var.test
     TEST_PROPERTY_NAME = var.test_property_name
   }
+
+  depends_on = [
+    azurerm_application_insights.app_insights,
+    azurerm_service_plan.service_plan
+  ]
 }
