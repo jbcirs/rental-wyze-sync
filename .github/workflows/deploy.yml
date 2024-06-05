@@ -66,7 +66,8 @@ jobs:
         uses: Azure/cli@v1.0.0
         with:
           inlineScript: |
-            az functionapp deployment list-publishing-profiles --name sync-locks-functions --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > src/functions.publishsettings
+            cd src
+            az functionapp deployment list-publishing-profiles --name sync-locks-functions --resource-group sync-locks --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --output tsv > functions.publishsettings
             cat functions.publishsettings
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
