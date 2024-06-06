@@ -44,7 +44,7 @@ jobs:
 
       - name: Package Functions
         run: |
-          docker run --rm --mount type=bind,src=$(pwd)/temp,target=/app python:${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }} /bin/sh -c 'apt update && apt install git -y && pip3 install -r /app/requirements.txt -t /app'
+          docker run --rm --mount type=bind,src=$(pwd)/temp,target=/app python:${{ env.PYTHON_VERSION }} /bin/sh -c 'apt update && apt install git -y && pip3 install -r /app/requirements.txt -t /app'
           cd temp
           rm requirements.txt
           zip -rq ../src.zip ./*
