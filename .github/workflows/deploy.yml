@@ -1,4 +1,4 @@
-name: Azure Function CI/CD
+name: Azure Function Deploy
 concurrency:
   group: deploy
   cancel-in-progress: false
