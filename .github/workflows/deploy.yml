@@ -37,11 +37,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Zip Lambda Src code
+      - name: Zip Function Src code
         run: |
           rm -rf temp src.zip && mkdir temp && cp -r ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/* temp
 
-      - name: Package Lambda
+      - name: Package Function
         run: |
           docker run --rm --mount type=bind,src=$(pwd)/temp,target=/app python:3.9 /bin/sh -c 'apt update && apt install git -y && pip3 install -r /app/requirements.txt -t /app'
           cd temp
