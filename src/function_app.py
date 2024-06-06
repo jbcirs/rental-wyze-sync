@@ -3,6 +3,22 @@ import os
 import azure.functions as func
 #from lock_sync import process_reservations
 
+
+import requests
+import re
+from datetime import datetime, timedelta
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
+from wyze_sdk import Client
+from wyze_sdk.errors import WyzeApiError
+from wyze_sdk.models.devices.locks import LockKeyPermission, LockKeyPermissionType
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+from error_mapping import get_error_message
+
+
+
+
 app = func.FunctionApp()
 
 @app.schedule(schedule="0 0 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
@@ -32,7 +48,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         os.environ['DELETE_ALL_GUEST_CODES'] = delete_all_guest_codes.lower() == 'true'
 
     try:
-        logging.info('Run process_reservations()')
+        #process_reservations()
         return func.HttpResponse("Function executed successfully.", status_code=200)
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
