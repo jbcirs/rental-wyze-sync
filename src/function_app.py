@@ -5,7 +5,7 @@ import azure.functions as func
 
 app = func.FunctionApp()
 
-@app.schedule(schedule="0 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
+@app.schedule(schedule="0 0 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
 def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
     logging.info('Python timer trigger function executed at %s', mytimer)
 
