@@ -22,7 +22,7 @@ TEST =  os.environ.get('TEST', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 
 # Azure Key Vault client
-credential = DefaultAzureCredential(additionally_allowed_tenants=['*'])
+credential = DefaultAzureCredential()
 client = SecretClient(vault_url=VAULT_URL, credential=credential)
 
 # Fetch secrets from Key Vault
