@@ -13,7 +13,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
   
   site_config {
     application_stack {
-      python_version = "3.11"
+      python_version = "3.9"
     }
   }
 
