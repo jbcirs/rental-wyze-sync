@@ -26,13 +26,13 @@ credential = DefaultAzureCredential()
 client = SecretClient(vault_url=VAULT_URL, credential=credential)
 
 # Fetch secrets from Key Vault
-HOSPITABLE_EMAIL = client.get_secret("HOSPITABLE_EMAIL").value
-HOSPITABLE_PASSWORD = client.get_secret("HOSPITABLE_PASSWORD").value
-SLACK_TOKEN = client.get_secret("SLACK_TOKEN").value
-WYZE_EMAIL = client.get_secret("WYZE_EMAIL").value
-WYZE_PASSWORD = client.get_secret("WYZE_PASSWORD").value
-WYZE_KEY_ID = client.get_secret("WYZE_KEY_ID").value
-WYZE_API_KEY = client.get_secret("WYZE_API_KEY").value
+HOSPITABLE_EMAIL = client.get_secret("HOSPITABLE-EMAIL").value
+HOSPITABLE_PASSWORD = client.get_secret("HOSPITABLE-PASSWORD").value
+SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
+WYZE_EMAIL = client.get_secret("WYZE-EMAIL").value
+WYZE_PASSWORD = client.get_secret("WYZE-PASSWORD").value
+WYZE_KEY_ID = client.get_secret("WYZE-KEY-ID").value
+WYZE_API_KEY = client.get_secret("WYZE-API-KEY").value
 
 
 # Initialize Slack client
