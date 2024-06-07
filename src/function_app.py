@@ -9,12 +9,12 @@ import re
 from datetime import datetime, timedelta
 #from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
-# from wyze_sdk import Client
-# from wyze_sdk.errors import WyzeApiError
-# from wyze_sdk.models.devices.locks import LockKeyPermission, LockKeyPermissionType
-# from slack_sdk import WebClient
-# from slack_sdk.errors import SlackApiError
-# from error_mapping import get_error_message
+from wyze_sdk import Client
+from wyze_sdk.errors import WyzeApiError
+from wyze_sdk.models.devices.locks import LockKeyPermission, LockKeyPermissionType
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+from error_mapping import get_error_message
 
 
 
