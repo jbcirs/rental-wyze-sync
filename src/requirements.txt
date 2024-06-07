@@ -1,8 +1,8 @@
 # Do not include azure-functions-worker as it may conflict with the Azure Functions platform
 
 azure-functions
-requests
+requests==2.32.3
 wyze-sdk==2.2.0
 slack_sdk==3.27.2
-azure-identity
-azure-keyvault-secrets
+azure-identity==1.7.0
+azure-keyvault-secrets==4.2.0
