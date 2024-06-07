@@ -7,7 +7,7 @@ import azure.functions as func
 import requests
 import re
 from datetime import datetime, timedelta
-from azure.identity import DefaultAzureCredential
+import azure.identity
 from azure.keyvault.secrets import SecretClient
 from wyze_sdk import Client
 from wyze_sdk.errors import WyzeApiError
