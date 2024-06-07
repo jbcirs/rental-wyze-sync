@@ -1,7 +1,6 @@
 import logging
 import os
 import azure.functions as func
-from lock_sync import process_reservations
 
 
 app = func.FunctionApp()
@@ -11,6 +10,7 @@ def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
     logging.info('Python timer trigger function executed at %s', mytimer)
 
     try:
+        from lock_sync import process_reservations
         #process_reservations()
         logging.info('Run process_reservations()')
     except Exception as e:
@@ -33,8 +33,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         os.environ['DELETE_ALL_GUEST_CODES'] = delete_all_guest_codes.lower() == 'true'
 
     try:
-        #from lock_sync import process_reservations
-        #logging.info('Sucess: from lock_sync import process_reservations')
+        from lock_sync import process_reservations
         process_reservations()
         return func.HttpResponse("Function executed successfully.", status_code=200)
     except Exception as e:
