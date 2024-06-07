@@ -36,7 +36,7 @@ variable "test" {
 
 variable "local" {
   description = "Running local"
-  default = true
+  default = false
   type = bool
 }
 
