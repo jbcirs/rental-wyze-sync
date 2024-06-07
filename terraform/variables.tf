@@ -34,6 +34,12 @@ variable "test" {
   type = bool
 }
 
+variable "local" {
+  description = "Running local"
+  default = true
+  type = bool
+}
+
 variable "test_property_name" {
   description = "Check out offset hours"
   default = "Paradise Cove Enchanted Oaks - FD"
