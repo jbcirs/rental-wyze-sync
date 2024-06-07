@@ -1,7 +1,7 @@
 import logging
 import os
 import azure.functions as func
-#from lock_sync import process_reservations
+from lock_sync import process_reservations
 
 
 app = func.FunctionApp()
@@ -33,14 +33,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         os.environ['DELETE_ALL_GUEST_CODES'] = delete_all_guest_codes.lower() == 'true'
 
     try:
-        #process_reservations()
-        from azure.identity import DefaultAzureCredential
-        logging.info('Success: from azure.identity import DefaultAzureCredential')
-
-        # Azure Key Vault client
-        credential = DefaultAzureCredential()
-        logging.info('Success: credential = DefaultAzureCredential()')
-
+        process_reservations()
         return func.HttpResponse("Function executed successfully.", status_code=200)
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
