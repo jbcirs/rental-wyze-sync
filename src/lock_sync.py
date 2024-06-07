@@ -2,6 +2,7 @@ import logging
 import os
 import requests
 import re
+import time
 from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -20,19 +21,29 @@ CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 TEST =  os.environ.get('TEST', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
+LOCAL = os.environ.get('LOCAL', 'false').lower() == 'true'
 
-# Azure Key Vault client
-credential = DefaultAzureCredential()
-client = SecretClient(vault_url=VAULT_URL, credential=credential)
+if LOCAL:
+    HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
+    HOSPITABLE_PASSWORD = os.environ["HOSPITABLE_PASSWORD"]
+    SLACK_TOKEN = os.environ["SLACK_TOKEN"]
+    WYZE_EMAIL = os.environ["WYZE_EMAIL"]
+    WYZE_PASSWORD = os.environ["WYZE_PASSWORD"]
+    WYZE_KEY_ID = os.environ["WYZE_KEY_ID"]
+    WYZE_API_KEY = os.environ["WYZE_API_KEY"]
+else:
+    # Azure Key Vault client
+    credential = DefaultAzureCredential()
+    client = SecretClient(vault_url=VAULT_URL, credential=credential)
 
-# Fetch secrets from Key Vault
-HOSPITABLE_EMAIL = client.get_secret("HOSPITABLE-EMAIL").value
-HOSPITABLE_PASSWORD = client.get_secret("HOSPITABLE-PASSWORD").value
-SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
-WYZE_EMAIL = client.get_secret("WYZE-EMAIL").value
-WYZE_PASSWORD = client.get_secret("WYZE-PASSWORD").value
-WYZE_KEY_ID = client.get_secret("WYZE-KEY-ID").value
-WYZE_API_KEY = client.get_secret("WYZE-API-KEY").value
+    # Fetch secrets from Key Vault
+    HOSPITABLE_EMAIL = client.get_secret("HOSPITABLE-EMAIL").value
+    HOSPITABLE_PASSWORD = client.get_secret("HOSPITABLE-PASSWORD").value
+    SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
+    WYZE_EMAIL = client.get_secret("WYZE-EMAIL").value
+    WYZE_PASSWORD = client.get_secret("WYZE-PASSWORD").value
+    WYZE_KEY_ID = client.get_secret("WYZE-KEY-ID").value
+    WYZE_API_KEY = client.get_secret("WYZE-API-KEY").value
 
 
 # Initialize Slack client
@@ -66,7 +77,7 @@ def process_reservations():
             reservations = get_reservations(token, property_id)
 
             if not reservations:
-                send_slack_message(f"Unable to fetch reservations for property {property_name}.")
+                send_slack_message(f"No reservations for property {property_name}.")
                 continue
 
             lock_name = f"{property_name} - FD"
@@ -78,14 +89,14 @@ def process_reservations():
 
             lock_info = get_lock_info(locks_client, lock_name)
             if lock_info is None:
-                send_slack_message(f"Unable to fetch lock info for {lock_name}.")
+                send_slack_message(f"Unable to fetch lock info for {lock_name} at {property_name}.")
                 continue
 
             lock_mac = lock_info.mac
             existing_codes = get_lock_codes(locks_client, lock_mac)
 
             if existing_codes is None:
-                send_slack_message(f"Unable to fetch lock codes for {lock_name}.")
+                send_slack_message(f"Unable to fetch lock codes for {lock_name} at {property_name}.")
                 continue
 
             locks_client._user_id = get_user_id_from_existing_codes(existing_codes, locks_client._user_id)
@@ -97,14 +108,17 @@ def process_reservations():
             deletions = []
             updates = []
             additions = []
+            errors = []
 
             # Delete old guest codes
             for code in existing_codes:
                 if code.name.startswith("Guest"):
                     permission = code.permission
                     if DELETE_ALL_GUEST_CODES or (permission.type == LockKeyPermissionType.DURATION and permission.end < datetime.now()):
-                        delete_lock_code(locks_client, lock_mac, code.id)
-                        deletions.append(code.name)
+                        if delete_lock_code(locks_client, lock_mac, code.id):
+                            deletions.append(code.name)
+                        else:
+                            errors.append(f"Deleting Code for {label}")
 
             # Process reservations
             for reservation in reservations:
@@ -124,17 +138,24 @@ def process_reservations():
 
                 if not label_exists(existing_codes, label):
                     logging.info(f"ADD: {property_name}; label: {label}")
-                    add_lock_code(locks_client, lock_mac, phone_last4, label, permission)
-                    additions.append(label)
+                    if add_lock_code(locks_client, lock_mac, phone_last4, label, permission):
+                        additions.append(label)
+                    else:
+                        errors.append(f"Adding Code for {label}")
                 else:
                     update_code = next((c for c in existing_codes if c.name == label), None)
                     if update_code:
                         logging.info(f"UPDATE: {property_name}; label: {label}")
-                        update_lock_code(locks_client, lock_mac, update_code.id, phone_last4, label, permission)
-                        updates.append(label)
+                        if update_lock_code(locks_client, lock_mac, update_code.id, phone_last4, label, permission):
+                            updates.append(label)
+                        else:
+                            errors.append(f"Updating Code for {label}")
+                
+                # Slow down API calls for Wyze locks
+                time.sleep(5)
 
             # Send Slack summary
-            send_summary_slack_message(property_name, deletions, updates, additions)
+            send_summary_slack_message(property_name, deletions, updates, additions, errors)
 
     except Exception as e:
         logging.error(f"Error in function: {str(e)}")
@@ -215,8 +236,11 @@ def add_lock_code(locks_client, lock_mac, code, label, permission):
             permission=permission
         )
         if response['ErrNo'] != 0:
-            raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            logging.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            return False
+        
         logging.info(f"{response}")
+        return True
     except WyzeApiError as e:
         logging.error(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
         send_slack_message(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
@@ -230,9 +254,13 @@ def update_lock_code(locks_client, lock_mac, code_id, code, label, permission):
             name=label, 
             permission=permission
         )
+
         if response['ErrNo'] != 0:
-            raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            logging.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            return False
+        
         logging.info(f"{response}")
+        return True
     except WyzeApiError as e:
         logging.error(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
         send_slack_message(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
@@ -244,8 +272,11 @@ def delete_lock_code(locks_client, lock_mac, code_id):
             access_code_id=code_id
         )
         if response['ErrNo'] != 0:
-            raise WyzeApiError(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            logging.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            return False
+            
         logging.info(f"{response}")
+        return True
     except WyzeApiError as e:
         logging.error(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
         send_slack_message(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
@@ -256,11 +287,12 @@ def send_slack_message(message):
     except SlackApiError as e:
         logging.error(f"Slack API Error: {str(e)}")
 
-def send_summary_slack_message(property_name, deletions, updates, additions):
+def send_summary_slack_message(property_name, deletions, updates, additions, errors):
     message = f"Property: {property_name}\n"
-    message += "Deleted Codes:\n" + "\n".join(deletions) + "\n"
-    message += "Updated Codes:\n" + "\n".join(updates) + "\n"
-    message += "Added Codes:\n" + "\n".join(additions) + "\n"
+    message += "Deleted Codes:\n" + ("\n".join([f"`{item}`" for item in deletions]) if deletions else "_-None-_") + "\n"
+    message += "Updated Codes:\n" + ("\n".join([f"`{item}`" for item in updates]) if updates else "_-None-_") + "\n"
+    message += "Added Codes:\n" + ("\n".join([f"`{item}`" for item in additions]) if additions else "_-None-_") + "\n"
+    message += "Errors:\n" + ("\n".join([f"`{item}`" for item in errors]) if errors else "_-None-_") + "\n"
     send_slack_message(message)
 
 def format_datetime(date_str, offset_hours=0):
