@@ -27,6 +27,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         try:
             req_body = req.get_json()
             delete_all_guest_codes = req_body.get('DELETE_ALL_GUEST_CODES', 'false').lower() == 'true'
+            logging.info(f"delete_all_guest_codes: {delete_all_guest_codes}")
         except ValueError:
             logging.warning('Invalid JSON in request body.')
 
