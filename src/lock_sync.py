@@ -20,7 +20,7 @@ from error_mapping import get_error_message
 VAULT_URL = os.environ["VAULT_URL"]
 SLACK_CHANNEL = os.environ['SLACK_CHANNEL']
 CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
-CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
+CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_OUT_OFFSET_HOURS'])
 NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
@@ -64,7 +64,7 @@ table_service_client = TableServiceClient(
 )
 #table_client = table_service_client.get_table_client(table_name="locks")
 
-def process_reservations(delete_all_guest_codes=False):
+def process_reservations(delete_all_guest_codes=True):
     logging.info('Processing reservations.')
 
     try:
@@ -158,14 +158,8 @@ def process_reservations(delete_all_guest_codes=False):
                 label = f"Guest {guest_first_name}"
                 label += f" {reservation['checkin'][:10].replace('-', '')}"
 
-                logging.info(f"{property_name} reservation['checkin']: {reservation['checkin']}")
-                logging.info(f"{property_name} reservation['checkout']: {reservation['checkout']}")
-
                 checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS)
                 checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS)
-
-                logging.info(f"{property_name} lock checkin_time: {checkin_time}")
-                logging.info(f"{property_name} lock checkout_time: {checkout_time}")
 
                 permission = LockKeyPermission(
                     type=LockKeyPermissionType.DURATION, 
@@ -275,8 +269,8 @@ def add_lock_code(locks_client, lock_mac, code, label, permission):
             return False
         
         logging.info(f"{response}")
-        # Slow down API calls for Wyze locks
-        time.sleep(WYZE_API_DELAY_SECONDS)
+        time.sleep(WYZE_API_DELAY_SECONDS) # Slow down API calls for Wyze locks
+
         return True
     except WyzeApiError as e:
         logging.error(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
@@ -297,8 +291,8 @@ def update_lock_code(locks_client, lock_mac, code_id, code, label, permission):
             return False
         
         logging.info(f"{response}")
-        # Slow down API calls for Wyze locks
-        time.sleep(WYZE_API_DELAY_SECONDS)
+        time.sleep(WYZE_API_DELAY_SECONDS) # Slow down API calls for Wyze locks
+
         return True
     except WyzeApiError as e:
         logging.error(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
@@ -315,8 +309,8 @@ def delete_lock_code(locks_client, lock_mac, code_id):
             return False
             
         logging.info(f"{response}")
-        # Slow down API calls for Wyze locks
-        #time.sleep(WYZE_API_DELAY_SECONDS)
+        time.sleep(WYZE_API_DELAY_SECONDS) # Slow down API calls for Wyze locks
+
         return True
     except WyzeApiError as e:
         logging.error(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
