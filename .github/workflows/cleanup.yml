@@ -41,8 +41,12 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
+      - name: Select Terraform Workspace
+        run: terraform workspace select ${{ env.TF_VAR_app_name }}
+        working-directory: ./terraform
+
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+        run: terraform destroy -auto-approve -var-file=./vars/non_prod.tfvars
         working-directory: ./terraform
 
       
