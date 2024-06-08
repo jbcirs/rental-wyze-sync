@@ -31,6 +31,7 @@ jobs:
       TF_VAR_app_name: 'sync-locks'
       TF_VAR_app_name_no_spaces: 'synclocks'
       TF_VAR_non_prod: 'true'
+      TF_VAR_enviorment: 'None'
 
     steps:
       - name: Checkout code
