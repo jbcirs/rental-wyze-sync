@@ -293,7 +293,7 @@ def delete_lock_code(locks_client, lock_mac, code_id):
             device_mac=lock_mac, 
             access_code_id=code_id
         )
-        if response['ErrNo'] != 0:
+        if response['ErrNo'] not in (0, 5021):
             logging.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
             return False
             

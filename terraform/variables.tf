@@ -93,3 +93,8 @@ variable "environment" {
   description    = "Environment being used"
   type           = string
 }
+
+variable "timezone" {
+  description    = "Timezone of the app"
+  type           = string
+}
