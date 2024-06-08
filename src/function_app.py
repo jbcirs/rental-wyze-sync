@@ -42,36 +42,36 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
 
-@app.function_name(name="DeleteGuestCodesFunction")
-@app.route(route="deletecodes", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
-def delete_guest_codes(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger function processed a request.')
+# @app.function_name(name="DeleteGuestCodesFunction")
+# @app.route(route="deletecodes", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
+# def delete_guest_codes(req: func.HttpRequest) -> func.HttpResponse:
+#     logging.info('Python HTTP trigger function processed a request.')
 
-    try:
-        req_body = req.get_json()
-    except ValueError:
-        return func.HttpResponse(
-            "Invalid JSON body",
-            status_code=400
-        )
+#     try:
+#         req_body = req.get_json()
+#     except ValueError:
+#         return func.HttpResponse(
+#             "Invalid JSON body",
+#             status_code=400
+#         )
 
-    delete_all_guest_codes = req_body.get('delete_all_guest_codes')
+#     delete_all_guest_codes = req_body.get('delete_all_guest_codes')
 
-    if delete_all_guest_codes is not None:
-        if delete_all_guest_codes:
-            logging.info("Deleting all guest codes.")
-            # Implement the deletion logic here
-        else:
-            logging.info("Not deleting guest codes.")
+#     if delete_all_guest_codes is not None:
+#         if delete_all_guest_codes:
+#             logging.info("Deleting all guest codes.")
+#             # Implement the deletion logic here
+#         else:
+#             logging.info("Not deleting guest codes.")
 
-        return func.HttpResponse(
-            json.dumps({"message": "Request processed successfully"}),
-            status_code=200,
-            mimetype="application/json"
-        )
-    else:
-        return func.HttpResponse(
-            json.dumps({"error": "Missing 'delete_all_guest_codes' field"}),
-            status_code=400,
-            mimetype="application/json"
-        )
+#         return func.HttpResponse(
+#             json.dumps({"message": "Request processed successfully"}),
+#             status_code=200,
+#             mimetype="application/json"
+#         )
+#     else:
+#         return func.HttpResponse(
+#             json.dumps({"error": "Missing 'delete_all_guest_codes' field"}),
+#             status_code=400,
+#             mimetype="application/json"
+#         )

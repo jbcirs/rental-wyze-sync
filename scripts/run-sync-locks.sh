@@ -1,5 +1,3 @@
-#!/bin/bash
-
 export HOSPITABLE_EMAIL=""
 export HOSPITABLE_PASSWORD=""
 export WYZE_EMAIL=""
@@ -12,9 +10,10 @@ export DELETE_ALL_GUEST_CODES=False
 export CHECK_IN_OFFSET_HOURS=-1
 export CHECK_OUT_OFFSET_HOURS=1
 export NON_PROD=True
-export TEST_PROPERTY_NAME="House - FD"
-export LOCAL_DEVELOPMENT=False
+export TEST_PROPERTY_NAME=""
+export LOCAL_DEVELOPMENT=True
 export WYZE_API_DELAY_SECONDS=5
+export VAULT_URL=""
 export STORAGE_ACCOUNT_NAME=""
 export STORAGE_ACCOUNT_KEY=""
 
@@ -26,5 +25,4 @@ cd src/
 
 pip3 install -r requirements.txt --upgrade --force-reinstall
 
-python3 ./lock-sync.py
-
+python3 ./lock_sync.py

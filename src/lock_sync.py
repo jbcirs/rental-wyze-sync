@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from azure.data.tables import TableServiceClient, TableClient, UpdateMode
+from azure.core.credentials import AzureNamedKeyCredential
 from wyze_sdk import Client
 from wyze_sdk.errors import WyzeApiError
 from wyze_sdk.models.devices.locks import LockKeyPermission, LockKeyPermissionType
@@ -54,9 +55,10 @@ else:
 slack_client = WebClient(token=SLACK_TOKEN)
 
 # Initialize Azure Table client
+credential = AzureNamedKeyCredential(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
 table_service_client = TableServiceClient(
     endpoint=f"https://{STORAGE_ACCOUNT_NAME}.table.core.windows.net",
-    credential=STORAGE_ACCOUNT_KEY
+    credential=credential
 )
 table_client = table_service_client.get_table_client(table_name="locks")
 
