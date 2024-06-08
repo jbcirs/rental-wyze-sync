@@ -64,7 +64,7 @@ table_service_client = TableServiceClient(
 )
 #table_client = table_service_client.get_table_client(table_name="locks")
 
-def process_reservations(delete_all_guest_codes=True):
+def process_reservations(delete_all_guest_codes=False):
     logging.info('Processing reservations.')
 
     try:
