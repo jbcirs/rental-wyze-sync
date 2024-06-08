@@ -136,8 +136,7 @@ def process_reservations(delete_all_guest_codes=False):
             for code in existing_codes:
                 if code.name.startswith("Guest"):
                     permission = code.permission
-                    logging.info(f"{permission.end} < {current_time}")
-                    if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < current_time):
+                    if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < datetime.now()):
                         if delete_lock_code(locks_client, lock_mac, code.id):
                             deletions.append(code.name)
                         else:
