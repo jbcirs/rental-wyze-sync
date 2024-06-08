@@ -18,9 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      AZURE_FUNCTIONAPP_NAME: 'sync-locks-functions'
       AZURE_FUNCTIONAPP_PACKAGE_PATH: 'src'
-      AZURE_FUNCTIONAPP_RESOURCE_GROUP: 'sync-locks'
       PYTHON_VERSION: '3.9'                           
       ARM_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
@@ -74,11 +72,11 @@ jobs:
         uses: azure/CLI@v1
         with:
           inlineScript: |
-            az functionapp deployment list-publishing-profiles --name ${{ env.AZURE_FUNCTIONAPP_NAME }} --resource-group ${{ env.AZURE_FUNCTIONAPP_RESOURCE_GROUP }} --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --query '[0].publishUrl' -o tsv > functions.publishsettings
+            az functionapp deployment list-publishing-profiles --name ${{ env.TF_VAR_app_name }}-functions --resource-group ${{ env.TF_VAR_app_name }} --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }} --query '[0].publishUrl' -o tsv > functions.publishsettings
 
       - name: Deploy Functions
         uses: Azure/functions-action@v1
         with:
-          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          app-name: ${{ env.TF_VAR_app_name }}-functions
           package: src.zip
           publish-profile: ${{ steps.getPublishProfile.outputs.publishUrl }}
