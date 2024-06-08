@@ -20,22 +20,21 @@ def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
-    delete_all_guest_codes = req.params.get('DELETE_ALL_GUEST_CODES')
+    delete_all_guest_codes = req.params.get('DELETE_ALL_GUEST_CODES', 'false').lower() == 'true'
+    logging.info(f"delete_all_guest_codes: {delete_all_guest_codes}")
+
     if not delete_all_guest_codes:
         try:
             req_body = req.get_json()
+            delete_all_guest_codes = req_body.get('DELETE_ALL_GUEST_CODES', 'false').lower() == 'true'
         except ValueError:
-            pass
-        else:
-            delete_all_guest_codes = req_body.get('DELETE_ALL_GUEST_CODES')
-
-    if delete_all_guest_codes:
-        os.environ['DELETE_ALL_GUEST_CODES'] = delete_all_guest_codes.lower() == 'true'
+            logging.warning('Invalid JSON in request body.')
 
     try:
         from lock_sync import process_reservations
-        process_reservations()
+        process_reservations(delete_all_guest_codes)
         return func.HttpResponse("Function executed successfully.", status_code=200)
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+

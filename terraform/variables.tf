@@ -10,12 +10,6 @@ variable "slack_channel" {
   type = string
 }
 
-variable "delete_all_guest_codes" {
-  description = "Delete all guest starting codes"
-  default = false
-  type = bool
-}
-
 variable "check_in_offset_hours" {
   description = "Check in offset hours"
   default = -1

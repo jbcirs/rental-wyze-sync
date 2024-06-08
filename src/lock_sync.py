@@ -16,7 +16,6 @@ from error_mapping import get_error_message
 # Configuration
 VAULT_URL = os.environ["VAULT_URL"]
 SLACK_CHANNEL = os.environ['SLACK_CHANNEL']
-DELETE_ALL_GUEST_CODES = os.environ.get('DELETE_ALL_GUEST_CODES', 'false').lower() == 'true'
 CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 TEST =  os.environ.get('TEST', 'false').lower() == 'true'
@@ -49,7 +48,7 @@ else:
 # Initialize Slack client
 slack_client = WebClient(token=SLACK_TOKEN)
 
-def process_reservations():
+def process_reservations(delete_all_guest_codes=False):
     logging.info('Processing reservations.')
 
     try:
@@ -114,7 +113,7 @@ def process_reservations():
             for code in existing_codes:
                 if code.name.startswith("Guest"):
                     permission = code.permission
-                    if DELETE_ALL_GUEST_CODES or (permission.type == LockKeyPermissionType.DURATION and permission.end < datetime.now()):
+                    if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < datetime.now()):
                         if delete_lock_code(locks_client, lock_mac, code.id):
                             deletions.append(code.name)
                         else:
