@@ -37,4 +37,9 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     azurerm_application_insights.app_insights,
     azurerm_service_plan.app_service_plan
   ]
+
+  tags = {
+    App = var.app_name
+    Enviorment = var.enviorment
+  }
 }

@@ -88,3 +88,8 @@ variable "wyze_api_delay_seconds" {
   default = 5
   type = number
 }
+
+variable "enviorment" {
+  description    = "Enviorment bing used"
+  type           = string
+}

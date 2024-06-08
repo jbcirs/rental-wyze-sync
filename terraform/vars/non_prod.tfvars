@@ -1,3 +1,4 @@
+enviorment = "non-prod"
 non_prod = true
 local_development = false
 

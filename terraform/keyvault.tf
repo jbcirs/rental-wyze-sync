@@ -15,6 +15,11 @@ resource "azurerm_key_vault" "key_vault" {
       "Set", "Get", "Delete", "Purge", "List"
     ]
   }
+
+  tags = {
+    App = var.app_name
+    Enviorment = var.enviorment
+  }
 }
 
 resource "azurerm_key_vault_access_policy" "admin" {
