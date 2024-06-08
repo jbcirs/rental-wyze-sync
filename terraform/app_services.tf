@@ -6,6 +6,6 @@ resource "azurerm_service_plan" "app_service_plan" {
   sku_name            = "Y1"
   tags = {
     App = var.app_name
-    Enviorment = var.enviorment
+    Environment = var.environment
   }
 }

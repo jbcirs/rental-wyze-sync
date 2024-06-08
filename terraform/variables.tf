@@ -89,7 +89,7 @@ variable "wyze_api_delay_seconds" {
   type = number
 }
 
-variable "enviorment" {
-  description    = "Enviorment bing used"
+variable "environment" {
+  description    = "Environment being used"
   type           = string
 }

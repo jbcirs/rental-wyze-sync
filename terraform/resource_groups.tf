@@ -3,6 +3,6 @@ resource "azurerm_resource_group" "rg" {
   location = "Central US"
   tags = {
     App = var.app_name
-    Enviorment = var.enviorment
+    Environment = var.environment
   }
 }

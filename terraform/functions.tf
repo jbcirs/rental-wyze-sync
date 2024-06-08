@@ -41,6 +41,6 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
 
   tags = {
     App = var.app_name
-    Enviorment = var.enviorment
+    Environment = var.environment
   }
 }

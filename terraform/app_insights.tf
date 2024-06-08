@@ -6,6 +6,6 @@ resource "azurerm_application_insights" "app_insights" {
   retention_in_days   = 30
   tags = {
     App = var.app_name
-    Enviorment = var.enviorment
+    Environment = var.environment
   }
 }
