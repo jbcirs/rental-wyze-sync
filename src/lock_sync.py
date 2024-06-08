@@ -352,5 +352,5 @@ def get_user_id_from_existing_codes(existing_codes, user_id=None):
 
     return user_id
 
-if __name__ == "__main__":
+if __name__ == "__main__" and LOCAL_DEVELOPMENT:
     process_reservations()
