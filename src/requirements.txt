@@ -7,3 +7,4 @@ slack_sdk==3.27.2
 azure-identity==1.16.0
 azure-keyvault-secrets==4.8.0
 cffi
+azure-data-tables==12.5.0

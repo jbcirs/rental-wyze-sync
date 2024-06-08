@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from azure.data.tables import TableServiceClient, TableClient, UpdateMode
 from wyze_sdk import Client
 from wyze_sdk.errors import WyzeApiError
 from wyze_sdk.models.devices.locks import LockKeyPermission, LockKeyPermissionType
@@ -22,6 +23,8 @@ NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
+STORAGE_ACCOUNT_NAME = os.environ['STORAGE_ACCOUNT_NAME']
+STORAGE_ACCOUNT_KEY = os.environ['STORAGE_ACCOUNT_KEY']
 
 if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
@@ -48,6 +51,13 @@ else:
 
 # Initialize Slack client
 slack_client = WebClient(token=SLACK_TOKEN)
+
+# Initialize Azure Table client
+table_service_client = TableServiceClient(
+    endpoint=f"https://{STORAGE_ACCOUNT_NAME}.table.core.windows.net",
+    credential=STORAGE_ACCOUNT_KEY
+)
+table_client = table_service_client.get_table_client(table_name="locks")
 
 def process_reservations(delete_all_guest_codes=False):
     logging.info('Processing reservations.')
@@ -286,7 +296,7 @@ def delete_lock_code(locks_client, lock_mac, code_id):
             
         logging.info(f"{response}")
         # Slow down API calls for Wyze locks
-        time.sleep(WYZE_API_DELAY_SECONDS)
+        #time.sleep(WYZE_API_DELAY_SECONDS)
         return True
     except WyzeApiError as e:
         logging.error(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
