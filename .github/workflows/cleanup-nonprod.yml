@@ -1,0 +1,51 @@
+name: Clean Up Nonprod
+concurrency:
+  group: cleanup-non-prod
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    env:                        
+      ARM_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
+      TF_VAR_hospitable_email: ${{ secrets.HOSPITABLE_EMAIL }}
+      TF_VAR_hospitable_password: ${{ secrets.HOSPITABLE_PASSWORD }}
+      TF_VAR_wyze_email: ${{ secrets.WYZE_EMAIL }}
+      TF_VAR_wyze_password: ${{ secrets.WYZE_PASSWORD }}
+      TF_VAR_wyze_key_id: ${{ secrets.WYZE_KEY_ID }}
+      TF_VAR_wyze_api_key: ${{ secrets.WYZE_API_KEY }}
+      TF_VAR_slack_token: ${{ secrets.SLACK_TOKEN }}
+      TF_VAR_aad_objectId_admin: ${{ secrets.AAD_OBJECTID_ADMIN }}
+      TF_VAR_app_name: 'sync-locks-np'
+      TF_VAR_app_name_no_spaces: 'synclocksnp'
+      TF_VAR_non_prod: 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
+
+      - name: Select Terraform Workspace
+        run: terraform workspace select ${{ env.TF_VAR_app_name }}
+        working-directory: ./terraform
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -var-file=./vars/non_prod.tfvars
+        working-directory: ./terraform
+
+      
