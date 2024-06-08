@@ -131,11 +131,12 @@ def process_reservations(delete_all_guest_codes=False):
             errors = []
 
             deleted_codes = False
-
+            
             # Delete old guest codes
             for code in existing_codes:
                 if code.name.startswith("Guest"):
                     permission = code.permission
+                    logging.info(f"{permission.end} < {current_time}")
                     if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < current_time):
                         if delete_lock_code(locks_client, lock_mac, code.id):
                             deletions.append(code.name)
@@ -149,6 +150,7 @@ def process_reservations(delete_all_guest_codes=False):
                 time.sleep(WYZE_API_DELAY_SECONDS)   # Slow down API calls for Wyze locks 
                 existing_codes = get_lock_codes(locks_client, lock_mac)
 
+            
             # Process reservations
             for reservation in reservations:
                 guest_name = reservation['guest']
