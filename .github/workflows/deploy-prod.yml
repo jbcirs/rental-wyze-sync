@@ -31,7 +31,7 @@ jobs:
       TF_VAR_aad_objectId_admin: ${{ secrets.AAD_OBJECTID_ADMIN }}
       TF_VAR_app_name: 'sync-locks'
       TF_VAR_app_name_no_spaces: 'synclocks'
-      TF_VAR_non_prod: 'false'
+      TF_VAR_non_prod: 'true'
 
     steps:
       - name: Checkout code
@@ -54,7 +54,7 @@ jobs:
         working-directory: ./terraform
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var-file=./vars/non_prod.tfvars
         working-directory: ./terraform
 
       - name: Az CLI login

@@ -57,7 +57,7 @@ jobs:
         working-directory: ./terraform
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var-file=./vars/non_prod.tfvars
         working-directory: ./terraform
 
       - name: Az CLI login
