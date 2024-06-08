@@ -60,7 +60,7 @@ table_service_client = TableServiceClient(
     endpoint=f"https://{STORAGE_ACCOUNT_NAME}.table.core.windows.net",
     credential=credential
 )
-table_client = table_service_client.get_table_client(table_name="locks")
+#table_client = table_service_client.get_table_client(table_name="locks")
 
 def process_reservations(delete_all_guest_codes=False):
     logging.info('Processing reservations.')
