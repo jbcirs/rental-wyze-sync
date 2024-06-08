@@ -12,8 +12,10 @@ def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
 
     try:
         from lock_sync import process_reservations
-        process_reservations()
-        logging.info('Run process_reservations()')
+        NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
+        if not NON_PROD:
+            process_reservations()
+            logging.info('Run process_reservations()')
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
 
