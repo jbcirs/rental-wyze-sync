@@ -7,19 +7,21 @@ resource "azurerm_key_vault" "key_vault" {
   soft_delete_retention_days  = 7
   purge_protection_enabled    = false
 
-  access_policy {
-    tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = data.azurerm_client_config.current.object_id
-
-    secret_permissions = [
-      "Set", "Get", "Delete", "Purge", "List"
-    ]
-  }
-
   tags = {
-    App = var.app_name
+    App        = var.app_name
     Enviorment = var.enviorment
   }
+}
+
+
+resource "azurerm_key_vault_access_policy" "current_user" {
+  key_vault_id = azurerm_key_vault.key_vault.id
+  tenant_id    = data.azurerm_client_config.current.tenant_id
+  object_id    = data.azurerm_client_config.current.object_id
+
+  secret_permissions = [
+    "Set", "Get", "Delete", "Purge", "List"
+  ]
 }
 
 resource "azurerm_key_vault_access_policy" "admin" {
@@ -41,6 +43,7 @@ resource "azurerm_key_vault_access_policy" "sync_locks_functions_access_policy" 
     "Get"
   ]
 }
+
 
 resource "azurerm_key_vault_secret" "hospitable_email" {
   name         = "HOSPITABLE-EMAIL"
