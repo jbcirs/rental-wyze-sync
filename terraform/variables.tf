@@ -26,9 +26,8 @@ variable "check_out_offset_hours" {
   type = number
 }
 
-variable "test" {
-  description = "Testing"
-  default = true
+variable "non_prod" {
+  description = "Non Prod"
   type = bool
 }
 

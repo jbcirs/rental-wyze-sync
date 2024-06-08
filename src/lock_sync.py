@@ -18,7 +18,7 @@ VAULT_URL = os.environ["VAULT_URL"]
 SLACK_CHANNEL = os.environ['SLACK_CHANNEL']
 CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
-TEST =  os.environ.get('TEST', 'false').lower() == 'true'
+NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
@@ -82,7 +82,7 @@ def process_reservations(delete_all_guest_codes=False):
 
             lock_name = f"{property_name} - FD"
 
-            if TEST:
+            if NON_PROD:
                 if lock_name != TEST_PROPERTY_NAME:
                     send_slack_message(f"Skipping locks for property {property_name}.")
                     continue

@@ -27,7 +27,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     SLACK_CHANNEL = var.slack_channel
     CHECK_IN_OFFSET_HOURS = var.check_in_offset_hours
     CHECK_OUT_OFFSET_HOURS = var.check_out_offset_hours
-    TEST = var.test
+    NON_PROD = var.non_prod
     LOCAL_DEVELOPMENT = var.local_development
     TEST_PROPERTY_NAME = var.test_property_name
     WYZE_API_DELAY_SECONDS = var.wyze_api_delay_seconds
