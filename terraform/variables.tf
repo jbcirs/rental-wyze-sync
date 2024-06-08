@@ -10,19 +10,16 @@ variable "app_name_no_spaces" {
 
 variable "slack_channel" {
   description = "The slack channel"
-  default = "#notifications"
   type = string
 }
 
 variable "check_in_offset_hours" {
   description = "Check in offset hours"
-  default = -1
   type = number
 }
 
 variable "check_out_offset_hours" {
   description = "Check out offset hours"
-  default = 1
   type = number
 }
 
@@ -39,7 +36,6 @@ variable "local_development" {
 
 variable "test_property_name" {
   description = "Check out offset hours"
-  default = "Paradise Cove Enchanted Oaks - FD"
   type = string
 }
 
@@ -85,7 +81,6 @@ variable "aad_objectId_admin" {
 
 variable "wyze_api_delay_seconds" {
   description = "Wyze API call delay"
-  default = 5
   type = number
 }
 
