@@ -1,4 +1,4 @@
-enviorment = "prod"
+environment = "prod"
 non_prod = false
 local_development = false
 
