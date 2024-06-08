@@ -11,8 +11,10 @@ export SLACK_CHANNEL="#notifications"
 export DELETE_ALL_GUEST_CODES=False
 export CHECK_IN_OFFSET_HOURS=-1
 export CHECK_OUT_OFFSET_HOURS=1
-export TEST=True
+export NON_PROD=True
 export TEST_PROPERTY_NAME="House - FD"
+export LOCAL_DEVELOPMENT=False
+export WYZE_API_DELAY_SECONDS=5
 
 
 
