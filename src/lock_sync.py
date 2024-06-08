@@ -24,7 +24,6 @@ TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
 STORAGE_ACCOUNT_NAME = os.environ['STORAGE_ACCOUNT_NAME']
-STORAGE_ACCOUNT_KEY = os.environ['STORAGE_ACCOUNT_KEY']
 
 if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
@@ -34,6 +33,7 @@ if LOCAL_DEVELOPMENT:
     WYZE_PASSWORD = os.environ["WYZE_PASSWORD"]
     WYZE_KEY_ID = os.environ["WYZE_KEY_ID"]
     WYZE_API_KEY = os.environ["WYZE_API_KEY"]
+    STORAGE_ACCOUNT_KEY = os.environ['STORAGE_ACCOUNT_KEY']
 else:
     # Azure Key Vault client
     credential = DefaultAzureCredential()
@@ -47,6 +47,7 @@ else:
     WYZE_PASSWORD = client.get_secret("WYZE-PASSWORD").value
     WYZE_KEY_ID = client.get_secret("WYZE-KEY-ID").value
     WYZE_API_KEY = client.get_secret("WYZE-API-KEY").value
+    STORAGE_ACCOUNT_KEY = client.get_secret("STORAGE-ACCOUNT-KEY").value
 
 
 # Initialize Slack client

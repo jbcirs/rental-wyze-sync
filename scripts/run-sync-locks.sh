@@ -15,6 +15,8 @@ export NON_PROD=True
 export TEST_PROPERTY_NAME="House - FD"
 export LOCAL_DEVELOPMENT=False
 export WYZE_API_DELAY_SECONDS=5
+export STORAGE_ACCOUNT_NAME=""
+export STORAGE_ACCOUNT_KEY=""
 
 
 

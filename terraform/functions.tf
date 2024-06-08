@@ -31,6 +31,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     LOCAL_DEVELOPMENT = var.local_development
     TEST_PROPERTY_NAME = var.test_property_name
     WYZE_API_DELAY_SECONDS = var.wyze_api_delay_seconds
+    STORAGE_ACCOUNT_NAME = azurerm_storage_account.storage.name
   }
 
   depends_on = [

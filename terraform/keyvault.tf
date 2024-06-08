@@ -83,3 +83,9 @@ resource "azurerm_key_vault_secret" "slack_token" {
   value        = var.slack_token
   key_vault_id = azurerm_key_vault.key_vault.id
 }
+
+resource "azurerm_key_vault_secret" "STORAGE_ACCOUNT_KEY" {
+  name         = "STORAGE-ACCOUNT-KEY"
+  value        = azurerm_storage_account.storage.primary_access_key
+  key_vault_id = azurerm_key_vault.key_vault.id
+}
