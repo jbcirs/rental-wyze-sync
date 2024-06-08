@@ -3,6 +3,7 @@ import os
 import requests
 import re
 import time
+import pytz
 from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -25,6 +26,7 @@ TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
 STORAGE_ACCOUNT_NAME = os.environ['STORAGE_ACCOUNT_NAME']
+TIMEZONE = os.environ['TZ']
 
 if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
@@ -66,6 +68,11 @@ def process_reservations(delete_all_guest_codes=False):
     logging.info('Processing reservations.')
 
     try:
+        logging.info(f"Server Time: {datetime.now()}")
+        timezone = pytz.timezone(TIMEZONE)
+        current_time = datetime.now(timezone)
+        logging.info(f"current_time: {current_time}")
+
         token = authenticate_hospitable()
         if not token:
             send_slack_message("Unable to authenticate with Hospitable API.")
@@ -129,7 +136,7 @@ def process_reservations(delete_all_guest_codes=False):
             for code in existing_codes:
                 if code.name.startswith("Guest"):
                     permission = code.permission
-                    if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < datetime.now()):
+                    if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < current_time):
                         if delete_lock_code(locks_client, lock_mac, code.id):
                             deletions.append(code.name)
                         else:
@@ -149,8 +156,15 @@ def process_reservations(delete_all_guest_codes=False):
                 phone_last4 = reservation['phone'][-4:]
                 label = f"Guest {guest_first_name}"
                 label += f" {reservation['checkin'][:10].replace('-', '')}"
+
+                logging.info(f"{property_name} reservation['checkin']: {reservation['checkin']}")
+                logging.info(f"{property_name} reservation['checkout']: {reservation['checkout']}")
+                
                 checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS)
                 checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS)
+
+                logging.info(f"{property_name} lock checkin_time: {checkin_time}")
+                logging.info(f"{property_name} lock checkout_time: {checkout_time}")
 
                 permission = LockKeyPermission(
                     type=LockKeyPermissionType.DURATION, 
@@ -203,8 +217,9 @@ def get_properties(token):
     return None
 
 def get_reservations(token, property_id):
-    today = datetime.now().strftime('%Y-%m-%d')
-    next_week = (datetime.now() + timedelta(days=7)).strftime('%Y-%m-%d')
+    timezone = pytz.timezone(TIMEZONE)
+    today = datetime.now(timezone).strftime('%Y-%m-%d')
+    next_week = (datetime.now(timezone) + timedelta(days=7)).strftime('%Y-%m-%d')
     url = f"https://api.hospitable.com/v1/reservations/?starts_or_ends_between={today}_{next_week}&timezones=false&property_ids={property_id}&calendar_blockable=true&include_family_reservations=true"
     headers = {'Authorization': f'Bearer {token}'}
     response = requests.get(url, headers=headers)
@@ -322,6 +337,8 @@ def send_summary_slack_message(property_name, deletions, updates, additions, err
 
 def format_datetime(date_str, offset_hours=0):
     date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
+    timezone = pytz.timezone(TIMEZONE)
+    date = timezone.localize(date)
     date += timedelta(hours=offset_hours)
     return date
 
