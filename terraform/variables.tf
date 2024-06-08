@@ -1,6 +1,10 @@
-variable "resource_name" {
+variable "app_name" {
   description = "The location of the resource group"
-  default = "sync-locks"
+  type        = string
+}
+
+variable "app_name_no_spaces" {
+  description = "The location of the resource group"
   type        = string
 }
 

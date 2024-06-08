@@ -1,5 +1,5 @@
 resource "azurerm_linux_function_app" "sync_locks_functions" {
-  name                       = "${var.resource_name}-functions"
+  name                       = "${var.app_name}-functions"
   location                   = azurerm_resource_group.rg.location
   resource_group_name        = azurerm_resource_group.rg.name
   service_plan_id            = azurerm_service_plan.app_service_plan.id
