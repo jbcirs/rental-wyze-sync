@@ -1,6 +1,6 @@
 name: Clean Up
 concurrency:
-  group: non-prod
+  group: cleanup
   cancel-in-progress: false
 
 on:
