@@ -20,13 +20,15 @@ def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
-    delete_all_guest_codes = req.params.get('DELETE_ALL_GUEST_CODES', 'false').lower() == 'true'
+    logging.info(f"req.params: {req.params}")
+    delete_all_guest_codes = req.params.get('delete_all_guest_codes', 'false').lower() == 'true'
     logging.info(f"delete_all_guest_codes: {delete_all_guest_codes}")
 
     if not delete_all_guest_codes:
         try:
             req_body = req.get_json()
-            delete_all_guest_codes = req_body.get('DELETE_ALL_GUEST_CODES', 'false').lower() == 'true'
+            logging.info(f"req_body: {req_body}")
+            delete_all_guest_codes = req_body.get('delete_all_guest_codes', 'false').lower() == 'true'
             logging.info(f"delete_all_guest_codes: {delete_all_guest_codes}")
         except ValueError:
             logging.warning('Invalid JSON in request body.')
