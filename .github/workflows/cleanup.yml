@@ -28,8 +28,8 @@ jobs:
       TF_VAR_wyze_api_key: ${{ secrets.WYZE_API_KEY }}
       TF_VAR_slack_token: ${{ secrets.SLACK_TOKEN }}
       TF_VAR_aad_objectId_admin: ${{ secrets.AAD_OBJECTID_ADMIN }}
-      TF_VAR_app_name: 'sync-locks'
-      TF_VAR_app_name_no_spaces: 'synclocks'
+      TF_VAR_app_name: 'sync-locks-np'
+      TF_VAR_app_name_no_spaces: 'synclocksnp'
       TF_VAR_non_prod: 'true'
       TF_VAR_enviorment: 'None'
 
