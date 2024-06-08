@@ -26,7 +26,7 @@ TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
 STORAGE_ACCOUNT_NAME = os.environ['STORAGE_ACCOUNT_NAME']
-TIMEZONE = os.environ['TZ']
+TIMEZONE = os.environ['TIMEZONE']
 
 if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
@@ -159,7 +159,7 @@ def process_reservations(delete_all_guest_codes=False):
 
                 logging.info(f"{property_name} reservation['checkin']: {reservation['checkin']}")
                 logging.info(f"{property_name} reservation['checkout']: {reservation['checkout']}")
-                
+
                 checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS)
                 checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS)
 
