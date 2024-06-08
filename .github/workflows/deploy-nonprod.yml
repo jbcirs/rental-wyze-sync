@@ -56,6 +56,10 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
+      - name: Select Terraform Workspace
+        run: terraform workspace select ${{ env.TF_VAR_app_name }} || terraform workspace new ${{ env.TF_VAR_app_name }}
+        working-directory: ./terraform
+
       - name: Terraform Apply
         run: terraform apply -auto-approve -var-file=./vars/non_prod.tfvars
         working-directory: ./terraform
