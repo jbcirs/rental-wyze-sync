@@ -18,7 +18,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
   }
 
   app_settings = {
-    "WEBSITE_TIME_ZONE" = var.timezone
+    "TZ" = var.timezone
     "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.app_insights.instrumentation_key
     "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
     "ApplicationInsightsAgent_EXTENSION_VERSION" = "~2"

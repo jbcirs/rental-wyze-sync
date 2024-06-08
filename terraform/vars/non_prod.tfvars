@@ -12,4 +12,4 @@ test_property_name = "Paradise Cove Enchanted Oaks - FD"
 
 wyze_api_delay_seconds = 6
 
-timezone = "Central Standard Time"
+timezone = "America/Chicago"

@@ -138,7 +138,8 @@ def process_reservations(delete_all_guest_codes=False):
                         deleted_codes = True
 
             # Update existing codes after delete    
-            if deleted_codes:    
+            if deleted_codes:
+                time.sleep(WYZE_API_DELAY_SECONDS)   # Slow down API calls for Wyze locks 
                 existing_codes = get_lock_codes(locks_client, lock_mac)
 
             # Process reservations
