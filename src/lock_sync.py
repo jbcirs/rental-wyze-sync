@@ -21,6 +21,7 @@ CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 TEST =  os.environ.get('TEST', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
+WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
 
 if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
@@ -157,9 +158,6 @@ def process_reservations(delete_all_guest_codes=False):
                             updates.append(label)
                         else:
                             errors.append(f"Updating Code for {label}")
-                
-                # Slow down API calls for Wyze locks
-                time.sleep(5)
 
             # Send Slack summary
             send_summary_slack_message(property_name, deletions, updates, additions, errors)
@@ -247,6 +245,8 @@ def add_lock_code(locks_client, lock_mac, code, label, permission):
             return False
         
         logging.info(f"{response}")
+        # Slow down API calls for Wyze locks
+        time.sleep(WYZE_API_DELAY_SECONDS)
         return True
     except WyzeApiError as e:
         logging.error(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
@@ -267,6 +267,8 @@ def update_lock_code(locks_client, lock_mac, code_id, code, label, permission):
             return False
         
         logging.info(f"{response}")
+        # Slow down API calls for Wyze locks
+        time.sleep(WYZE_API_DELAY_SECONDS)
         return True
     except WyzeApiError as e:
         logging.error(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
@@ -283,6 +285,8 @@ def delete_lock_code(locks_client, lock_mac, code_id):
             return False
             
         logging.info(f"{response}")
+        # Slow down API calls for Wyze locks
+        time.sleep(WYZE_API_DELAY_SECONDS)
         return True
     except WyzeApiError as e:
         logging.error(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")

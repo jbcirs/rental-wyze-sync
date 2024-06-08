@@ -79,3 +79,9 @@ variable "aad_objectId_admin" {
   description    = "AAD Object Id for Policies"
   type           = string
 }
+
+variable "wyze_api_delay_seconds" {
+  description = "Wyze API call delay"
+  default = 5
+  type = number
+}
