@@ -1,5 +1,5 @@
 enviorment = "prod"
-non_prod = true
+non_prod = false
 local_development = false
 
 slack_channel = "#locks"
