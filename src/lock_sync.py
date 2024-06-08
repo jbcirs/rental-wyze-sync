@@ -20,9 +20,9 @@ CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 TEST =  os.environ.get('TEST', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
-LOCAL = os.environ.get('LOCAL', 'false').lower() == 'true'
+LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 
-if LOCAL:
+if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
     HOSPITABLE_PASSWORD = os.environ["HOSPITABLE_PASSWORD"]
     SLACK_TOKEN = os.environ["SLACK_TOKEN"]

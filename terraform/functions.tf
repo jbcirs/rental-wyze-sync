@@ -28,7 +28,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     CHECK_IN_OFFSET_HOURS = var.check_in_offset_hours
     CHECK_OUT_OFFSET_HOURS = var.check_out_offset_hours
     TEST = var.test
-    LOCAL = var.local
+    LOCAL_DEVELOPMENT = var.local_development
     TEST_PROPERTY_NAME = var.test_property_name
   }
 

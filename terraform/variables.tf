@@ -28,8 +28,8 @@ variable "test" {
   type = bool
 }
 
-variable "local" {
-  description = "Running local"
+variable "local_development" {
+  description = "Running local development"
   default = false
   type = bool
 }
