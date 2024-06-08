@@ -109,6 +109,8 @@ def process_reservations(delete_all_guest_codes=False):
             additions = []
             errors = []
 
+            deleted_codes = False
+
             # Delete old guest codes
             for code in existing_codes:
                 if code.name.startswith("Guest"):
@@ -118,6 +120,12 @@ def process_reservations(delete_all_guest_codes=False):
                             deletions.append(code.name)
                         else:
                             errors.append(f"Deleting Code for {label}")
+                        
+                        deleted_codes = True
+
+            # Update existing codes after delete    
+            if deleted_codes:    
+                existing_codes = get_lock_codes(locks_client, lock_mac)
 
             # Process reservations
             for reservation in reservations:
