@@ -57,11 +57,11 @@ else:
 slack_client = WebClient(token=SLACK_TOKEN)
 
 # Initialize Azure Table client
-credential = AzureNamedKeyCredential(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
-table_service_client = TableServiceClient(
-    endpoint=f"https://{STORAGE_ACCOUNT_NAME}.table.core.windows.net",
-    credential=credential
-)
+# credential = AzureNamedKeyCredential(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
+# table_service_client = TableServiceClient(
+#     endpoint=f"https://{STORAGE_ACCOUNT_NAME}.table.core.windows.net",
+#     credential=credential
+# )
 #table_client = table_service_client.get_table_client(table_name="locks")
 
 def process_reservations(delete_all_guest_codes=False):
@@ -146,7 +146,7 @@ def process_reservations(delete_all_guest_codes=False):
 
             # Update existing codes after delete    
             if deleted_codes:
-                time.sleep(WYZE_API_DELAY_SECONDS)   # Slow down API calls for Wyze locks 
+                time.sleep(WYZE_API_DELAY_SECONDS)   # Slow down API calls for Wyze locks
                 existing_codes = get_lock_codes(locks_client, lock_mac)
 
             
@@ -161,26 +161,27 @@ def process_reservations(delete_all_guest_codes=False):
                 checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS)
                 checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS)
 
-                permission = LockKeyPermission(
-                    type=LockKeyPermissionType.DURATION, 
-                    begin=checkin_time, 
-                    end=checkout_time
-                )
+                if current_time < checkout_time:
+                    permission = LockKeyPermission(
+                        type=LockKeyPermissionType.DURATION, 
+                        begin=checkin_time, 
+                        end=checkout_time
+                    )
 
-                if not label_exists(existing_codes, label):
-                    logging.info(f"ADD: {property_name}; label: {label}")
-                    if add_lock_code(locks_client, lock_mac, phone_last4, label, permission):
-                        additions.append(label)
-                    else:
-                        errors.append(f"Adding Code for {label}")
-                else:
-                    update_code = next((c for c in existing_codes if c.name == label), None)
-                    if update_code:
-                        logging.info(f"UPDATE: {property_name}; label: {label}")
-                        if update_lock_code(locks_client, lock_mac, update_code.id, phone_last4, label, permission):
-                            updates.append(label)
+                    if not label_exists(existing_codes, label):
+                        logging.info(f"ADD: {property_name}; label: {label}")
+                        if add_lock_code(locks_client, lock_mac, phone_last4, label, permission):
+                            additions.append(label)
                         else:
-                            errors.append(f"Updating Code for {label}")
+                            errors.append(f"Adding Code for {label}")
+                    else:
+                        update_code = next((c for c in existing_codes if c.name == label), None)
+                        if update_code:
+                            logging.info(f"UPDATE: {property_name}; label: {label}")
+                            if update_lock_code(locks_client, lock_mac, update_code.id, phone_last4, label, permission):
+                                updates.append(label)
+                            else:
+                                errors.append(f"Updating Code for {label}")
 
             # Send Slack summary
             send_summary_slack_message(property_name, deletions, updates, additions, errors)
