@@ -13,3 +13,5 @@ test_property_name = "Paradise Cove Enchanted Oaks - FD"
 wyze_api_delay_seconds = 10
 
 timezone = "America/Chicago"
+
+always_send_slack_summary = false

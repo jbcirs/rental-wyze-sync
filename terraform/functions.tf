@@ -33,6 +33,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     TEST_PROPERTY_NAME = var.test_property_name
     WYZE_API_DELAY_SECONDS = var.wyze_api_delay_seconds
     STORAGE_ACCOUNT_NAME = azurerm_storage_account.storage.name
+    ALWAYS_SEND_SLACK_SUMMARY = var.always_send_slack_summary
   }
 
   depends_on = [

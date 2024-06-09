@@ -27,6 +27,7 @@ LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'tru
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
 STORAGE_ACCOUNT_NAME = os.environ['STORAGE_ACCOUNT_NAME']
 TIMEZONE = os.environ['TIMEZONE']
+ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
 
 if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
@@ -162,29 +163,36 @@ def process_reservations(delete_all_guest_codes=False):
                 checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS)
 
                 if current_time < checkout_time:
+
                     permission = LockKeyPermission(
                         type=LockKeyPermissionType.DURATION, 
                         begin=checkin_time, 
                         end=checkout_time
                     )
 
-                    if not label_exists(existing_codes, label):
+                    code = find_code(existing_codes, label)
+
+                    if not code:
                         logging.info(f"ADD: {property_name}; label: {label}")
                         if add_lock_code(locks_client, lock_mac, phone_last4, label, permission):
                             additions.append(label)
                         else:
                             errors.append(f"Adding Code for {label}")
                     else:
-                        update_code = next((c for c in existing_codes if c.name == label), None)
-                        if update_code:
+                        current_start_time = timezone.localize(code.permission.begin)
+                        current_end_time = timezone.localize(code.permission.end)
+                        logging.info(f"current_start_time: {current_start_time}; current_end_time: {current_end_time}")
+                        logging.info(f"checkin_time: {checkin_time}; checkout_time: {checkout_time}")
+
+                        if current_start_time != checkin_time or current_end_time != checkout_time:
                             logging.info(f"UPDATE: {property_name}; label: {label}")
-                            if update_lock_code(locks_client, lock_mac, update_code.id, phone_last4, label, permission):
+                            if update_lock_code(locks_client, lock_mac, code.id, phone_last4, label, permission):
                                 updates.append(label)
                             else:
                                 errors.append(f"Updating Code for {label}")
 
-            # Send Slack summary
-            send_summary_slack_message(property_name, deletions, updates, additions, errors)
+            if ALWAYS_SEND_SLACK_SUMMARY or any([deletions, updates, additions, errors]):
+                send_summary_slack_message(property_name, deletions, updates, additions, errors)
 
     except Exception as e:
         logging.error(f"Error in function: {str(e)}")
@@ -254,8 +262,8 @@ def get_lock_codes(locks_client, lock_mac):
         logging.error(f"Error retrieving lock codes for {lock_mac}: {str(e)}")
         return None
 
-def label_exists(existing_codes, label):
-    return any(c.name == label for c in existing_codes)
+def find_code(existing_codes, label):
+    return next((c for c in existing_codes if c.name == label), None)
 
 def add_lock_code(locks_client, lock_mac, code, label, permission):
     try:
@@ -325,10 +333,13 @@ def send_slack_message(message):
 
 def send_summary_slack_message(property_name, deletions, updates, additions, errors):
     message = f"Property: {property_name}\n"
-    message += "Deleted Codes:\n" + ("\n".join([f"`{item}`" for item in deletions]) if deletions else "_-None-_") + "\n"
-    message += "Updated Codes:\n" + ("\n".join([f"`{item}`" for item in updates]) if updates else "_-None-_") + "\n"
-    message += "Added Codes:\n" + ("\n".join([f"`{item}`" for item in additions]) if additions else "_-None-_") + "\n"
-    message += "Errors:\n" + ("\n".join([f"`{item}`" for item in errors]) if errors else "_-None-_") + "\n"
+    if not deletions and not updates and not additions and not errors:
+        message += "_No Changes_"
+    else:
+        message += "Deleted Codes:\n" + ("\n".join([f"`{item}`" for item in deletions]) if deletions else "_-None-_") + "\n"
+        message += "Updated Codes:\n" + ("\n".join([f"`{item}`" for item in updates]) if updates else "_-None-_") + "\n"
+        message += "Added Codes:\n" + ("\n".join([f"`{item}`" for item in additions]) if additions else "_-None-_") + "\n"
+        message += "Errors:\n" + ("\n".join([f"`{item}`" for item in errors]) if errors else "_-None-_") + "\n"
     send_slack_message(message)
 
 def format_datetime(date_str, offset_hours=0):

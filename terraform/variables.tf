@@ -93,3 +93,8 @@ variable "timezone" {
   description    = "Timezone of the app"
   type           = string
 }
+
+variable "always_send_slack_summary" {
+  description = "Always send slack summary on each run"
+  type = bool
+}

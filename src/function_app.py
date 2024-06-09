@@ -6,18 +6,19 @@ import azure.functions as func
 
 app = func.FunctionApp()
 
-@app.schedule(schedule="0 0 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
-def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
-    logging.info('Python timer trigger function executed at %s', mytimer)
+NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
 
-    try:
-        from lock_sync import process_reservations
-        NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
-        if not NON_PROD:
+if not NON_PROD:
+    @app.schedule(schedule="0 0 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
+    def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
+        logging.info('Python timer trigger function executed at %s', mytimer)
+
+        try:
+            from lock_sync import process_reservations
             process_reservations()
             logging.info('Run process_reservations()')
-    except Exception as e:
-        logging.error(f"Error executing function: {str(e)}")
+        except Exception as e:
+            logging.error(f"Error executing function: {str(e)}")
 
 @app.route(route="trigger_sync", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
