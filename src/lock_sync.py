@@ -137,7 +137,7 @@ def process_reservations(delete_all_guest_codes=False):
             for code in existing_codes:
                 if code.name.startswith("Guest"):
                     permission = code.permission
-                    if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and timezone.localize(permission.end) < current_time):
+                    if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < datetime.now()):
                         if delete_lock_code(locks_client, lock_mac, code.id):
                             deletions.append(code.name)
                         else:
@@ -183,10 +183,22 @@ def process_reservations(delete_all_guest_codes=False):
                         # current_end_time = timezone.localize(code.permission.end)
                         # logging.info(f"current_start_time: {current_start_time}; current_end_time: {current_end_time}")
                         logging.info(f"current_start_time: {code.permission.begin}; current_end_time: {code.permission.end}")
-                        logging.info(f"current_start_time: {timezone.localize(code.permission.begin)}; current_end_time: {timezone.localize(code.permission.end)}")
+                        logging.info(f"UTC current_start_time: {code.permission.begin.replace(tzinfo=pytz.utc)}; current_end_time: {code.permission.end.replace(tzinfo=pytz.utc)}")
                         logging.info(f"checkin_time: {checkin_time}; checkout_time: {checkout_time}")
+                        logging.info(f"UTC checkin_time: {checkin_time.astimezone(pytz.utc)}; checkout_time: {checkout_time.astimezone(pytz.utc)}")
 
-                        if timezone.localize(code.permission.begin) != checkin_time or timezone.localize(code.permission.end) != checkout_time:
+                        begin_utc = code.permission.begin.replace(tzinfo=pytz.utc)
+                        end_utc = code.permission.end.replace(tzinfo=pytz.utc)
+                        checkin_utc = checkin_time.astimezone(pytz.utc)
+                        checkout_utc = checkout_time.astimezone(pytz.utc)
+
+                        if LOCAL_DEVELOPMENT:
+                            begin_utc = timezone.localize(code.permission.begin)
+                            end_utc = timezone.localize(code.permission.end)
+                            checkin_utc = checkin_time
+                            checkout_utc = checkout_time
+
+                        if begin_utc != checkin_utc or end_utc != checkout_utc:
                             logging.info(f"UPDATE: {property_name}; label: {label}")
                             if update_lock_code(locks_client, lock_mac, code.id, phone_last4, label, permission):
                                 updates.append(label)
