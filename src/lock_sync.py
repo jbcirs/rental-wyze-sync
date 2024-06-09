@@ -97,7 +97,7 @@ def process_reservations(delete_all_guest_codes=False):
             property_name = prop['name']
             reservations = get_reservations(token, property_id)
 
-            if not reservations:
+            if not reservations and ALWAYS_SEND_SLACK_SUMMARY:
                 send_slack_message(f"No reservations for property {property_name}.")
                 continue
 
