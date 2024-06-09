@@ -179,14 +179,6 @@ def process_reservations(delete_all_guest_codes=False):
                         else:
                             errors.append(f"Adding Code for {label}")
                     else:
-                        # current_start_time = timezone.localize(code.permission.begin)
-                        # current_end_time = timezone.localize(code.permission.end)
-                        # logging.info(f"current_start_time: {current_start_time}; current_end_time: {current_end_time}")
-                        logging.info(f"current_start_time: {code.permission.begin}; current_end_time: {code.permission.end}")
-                        logging.info(f"UTC current_start_time: {code.permission.begin.replace(tzinfo=pytz.utc)}; current_end_time: {code.permission.end.replace(tzinfo=pytz.utc)}")
-                        logging.info(f"checkin_time: {checkin_time}; checkout_time: {checkout_time}")
-                        logging.info(f"UTC checkin_time: {checkin_time.astimezone(pytz.utc)}; checkout_time: {checkout_time.astimezone(pytz.utc)}")
-
                         begin_utc = code.permission.begin.replace(tzinfo=pytz.utc)
                         end_utc = code.permission.end.replace(tzinfo=pytz.utc)
                         checkin_utc = checkin_time.astimezone(pytz.utc)
