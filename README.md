@@ -34,7 +34,9 @@ Create an Azure Storage Account to store Terraform state files.
 1. Open the new storage account.
 2. Add a `tfstate` folder in Blob Storage under Storage Browser.
 
-Follow these [Microsoft Instructions](https://learn.microsoft.com/en-us/devops/deliver/iac-github-actions) for more details.
+   Follow these [Microsoft Instructions](https://learn.microsoft.com/en-us/devops/deliver/iac-github-actions) for more details.
+
+3. Update `storage_account_name` in `./terrafromprofivers.tf ` with the storage account name you created.
 
 ### 4. Setup Slack Bot
 
@@ -53,13 +55,11 @@ AAD_OBJECTID_ADMIN
 AZURE_AD_CLIENT_ID
 AZURE_AD_CLIENT_SECRET
 AZURE_AD_TENANT_ID
-AZURE_CREDENTIALS
 AZURE_SUBSCRIPTION_ID
 HOSPITABLE_EMAIL
 HOSPITABLE_PASSWORD
 RESOURCE_GROUP
 SLACK_TOKEN
-STORAGE_ACCOUNT
 WYZE_API_KEY
 WYZE_EMAIL
 WYZE_KEY_ID
@@ -67,10 +67,12 @@ WYZE_PASSWORD
 ```
 
 - `AZURE_AD_CLIENT_ID` is the app_id from the JSON object in step 2.
+- `AZURE_AD_CLIENT_SECRET` is the password from the JSON object in step 2.
+- `AZURE_AD_TENANT_ID` is from the JSON object in step 2.
+- `AZURE_SUBSCRIPTION_ID` is your Azure subscription id you used in step 2.
 - `AAD_OBJECTID_ADMIN` is your Object ID to access Key Vault secrets in the portal. You can get this from Microsoft by selecting the user.
 - `RESOURCE_GROUP` can be named anything as this is the main name of your app, e.g., `lock-sync`.
 - `SLACK_TOKEN` wil start with `xoxb-`
-- `STORAGE_ACCOUNT` is the name of the storage account for Terraform
 
 ### 7. Deploy the Azure Functions
 
