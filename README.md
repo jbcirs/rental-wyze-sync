@@ -64,6 +64,7 @@ WYZE_API_KEY
 WYZE_EMAIL
 WYZE_KEY_ID
 WYZE_PASSWORD
+SLACK_VERIFICATION_TOKEN
 ```
 
 - `AZURE_AD_CLIENT_ID` is the app_id from the JSON object in step 2.
@@ -72,7 +73,8 @@ WYZE_PASSWORD
 - `AZURE_SUBSCRIPTION_ID` is your Azure subscription id you used in step 2.
 - `AAD_OBJECTID_ADMIN` is your Object ID to access Key Vault secrets in the portal. You can get this from Microsoft by selecting the user.
 - `RESOURCE_GROUP` can be named anything as this is the main name of your app, e.g., `lock-sync`.
-- `SLACK_TOKEN` wil start with `xoxb-`
+- `SLACK_TOKEN` will start with `xoxb-`
+- `SLACK_VERIFICATION_TOKEN` this is a token you will create for authenticating slack commands. Make it anything.
 
 ### 7. Deploy the Azure Functions
 

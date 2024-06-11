@@ -98,3 +98,8 @@ variable "always_send_slack_summary" {
   description = "Always send slack summary on each run"
   type = bool
 }
+
+variable "slack_verification_token" {
+  description    = "Slack command token"
+  type           = string
+}

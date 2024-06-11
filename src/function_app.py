@@ -2,11 +2,25 @@ import logging
 import os
 import json
 import azure.functions as func
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 
 app = func.FunctionApp()
 
 NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
+LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
+VAULT_URL = os.environ["VAULT_URL"]
+
+if LOCAL_DEVELOPMENT:
+    SLACK_VERIFICATION_TOKEN = os.environ['SLACK_VERIFICATION_TOKEN']
+else:
+    # Azure Key Vault client
+    credential = DefaultAzureCredential()
+    client = SecretClient(vault_url=VAULT_URL, credential=credential)
+
+    # Fetch secrets from Key Vault
+    SLACK_VERIFICATION_TOKEN = client.get_secret("SLACK-VERIFICATION-TOKEN").value
 
 if not NON_PROD:
     @app.schedule(schedule="0 0 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
@@ -47,7 +61,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
     
 @app.function_name(name="Slack_Command_Lock")
-@app.route(route="slack_command_lock", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+@app.route(route="slack_command_lock", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.ANONYMOUS)
 def slack_command_lock(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request Slack Commnd Lock.')
 
@@ -62,6 +76,12 @@ def slack_command_lock(req: func.HttpRequest) -> func.HttpResponse:
         req_body = req.get_json()
     except ValueError:
         return func.HttpResponse("Invalid request", status_code=400)
+
+    # Verify the Slack token
+    slack_token = req_body.get('token')
+    expected_token = os.getenv('SLACK_VERIFICATION_TOKEN')
+    if slack_token != expected_token:
+        return func.HttpResponse("Unauthorized request", status_code=401)
     
     # Get the text command from the request
     command_text = req_body.get('text', '').strip()

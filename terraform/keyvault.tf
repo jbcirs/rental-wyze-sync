@@ -112,3 +112,11 @@ resource "azurerm_key_vault_secret" "STORAGE_ACCOUNT_KEY" {
 
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
 }
+
+resource "azurerm_key_vault_secret" "SLACK_VERIFICATION_TOKEN" {
+  name         = "SLACK-VERIFICATION-TOKEN"
+  value        = var.slack_verification_token
+  key_vault_id = azurerm_key_vault.key_vault.id
+
+  depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
+}
