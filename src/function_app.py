@@ -14,7 +14,7 @@ if not NON_PROD:
         logging.info('Python timer trigger function executed at %s', mytimer)
 
         try:
-            from lock_sync import process_reservations
+            from sync import process_reservations
             process_reservations()
             logging.info('Run process_reservations()')
         except Exception as e:
@@ -38,12 +38,14 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
             logging.warning('Invalid JSON in request body.')
 
     try:
-        from lock_sync import process_reservations
+        from sync import process_reservations
         process_reservations(delete_all_guest_codes)
         return func.HttpResponse("Function executed successfully.", status_code=200)
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+    
+
 
 # @app.function_name(name="DeleteGuestCodesFunction")
 # @app.route(route="deletecodes", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
