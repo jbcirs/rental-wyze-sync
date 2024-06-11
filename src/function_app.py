@@ -21,7 +21,7 @@ if not NON_PROD:
             logging.error(f"Error executing function: {str(e)}")
 
 @app.function_name(name="Sync")
-@app.route(route="trigger_sync", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
+@app.route(route="trigger_sync", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
