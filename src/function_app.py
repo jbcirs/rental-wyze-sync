@@ -46,37 +46,37 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
     
-@app.function_name(name="Property_List")
-@app.route(route="property_list", methods=["GET"], auth_level=func.AuthLevel.FUNCTION)
-def property_list(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('HTTP trigger function processed a request get_property_list.')
+# @app.function_name(name="Property_List")
+# @app.route(route="property_list", methods=["GET"], auth_level=func.AuthLevel.FUNCTION)
+# def property_list(req: func.HttpRequest) -> func.HttpResponse:
+#     logging.info('HTTP trigger function processed a request get_property_list.')
 
-    try:
-        from hospitable import authenticate_hospitable, get_properties
-        token = authenticate_hospitable()
-        if not token:
-            logging.info("Unable to authenticate with Hospitable API.")
-            return
+#     try:
+#         from hospitable import authenticate_hospitable, get_properties
+#         token = authenticate_hospitable()
+#         if not token:
+#             logging.info("Unable to authenticate with Hospitable API.")
+#             return
 
-        properties = get_properties(token)
-        if not properties:
-            logging.info("Unable to fetch properties from Hospitable API.")
-            return
+#         properties = get_properties(token)
+#         if not properties:
+#             logging.info("Unable to fetch properties from Hospitable API.")
+#             return
         
-        property_names = []
+#         property_names = []
         
-        for prop in properties:
-            property_names.append(prop['name'])
+#         for prop in properties:
+#             property_names.append(prop['name'])
 
-        return func.HttpResponse(
-            json.dumps(property_names),
-            mimetype="application/json",
-            status_code=200
-        )
+#         return func.HttpResponse(
+#             json.dumps(property_names),
+#             mimetype="application/json",
+#             status_code=200
+#         )
 
-    except Exception as e:
-        logging.error(f"Error executing function: {str(e)}")
-        return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+#     except Exception as e:
+#         logging.error(f"Error executing function: {str(e)}")
+#         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
     
 
 
