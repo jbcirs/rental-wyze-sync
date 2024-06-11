@@ -46,6 +46,49 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
     
+@app.function_name(name="Slack_Command_Lock")
+@app.route(route="slack_command_lock", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+def slack_command_lock(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('HTTP trigger function processed a request Slack Commnd Lock.')
+
+    property_names = [
+        "Property1 - Front Door",
+        "Property2 - Front Door",
+        "Property3 - Front Door"
+    ]
+
+    # Parse the request body
+    try:
+        req_body = req.get_json()
+    except ValueError:
+        return func.HttpResponse("Invalid request", status_code=400)
+    
+    # Get the text command from the request
+    command_text = req_body.get('text', '').strip()
+
+    if command_text == 'help':
+        response_text = (
+            "Available commands:\n"
+            "• help: Show this help message\n"
+            "• list: List all property names"
+        )
+    elif command_text == 'list':
+        response_text = "Property names:\n" + "\n".join(property_names)
+    else:
+        response_text = (
+            "Unknown command. Available commands:\n"
+            "• help: Show this help message\n"
+            "• list: List all property names"
+        )
+
+    return func.HttpResponse(
+        json.dumps({
+            "response_type": "in_channel",  # public to the channel
+            "text": response_text
+        }),
+        mimetype="application/json"
+    )
+    
 @app.function_name(name="Property_List")
 @app.route(route="property_list", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.FUNCTION)
 def property_list(req: func.HttpRequest) -> func.HttpResponse:
