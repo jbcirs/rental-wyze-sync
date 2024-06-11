@@ -47,7 +47,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     
 
 @app.route(route="property_list", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.FUNCTION)
-def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
+def property_list(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request get_property_list.')
 
     try:
