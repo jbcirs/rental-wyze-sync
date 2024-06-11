@@ -20,7 +20,7 @@ if not NON_PROD:
         except Exception as e:
             logging.error(f"Error executing function: {str(e)}")
 
-@app.route(route="trigger_sync", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+@app.route(route="trigger_sync", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
@@ -45,7 +45,8 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
     
-@app.route(route="property_list", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+
+@func.HttpTrigger(route="property_list", methods=["get"], auth_level=func.AuthLevel.FUNCTION)
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request get_property_list.')
 
