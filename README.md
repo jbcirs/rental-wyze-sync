@@ -101,7 +101,12 @@ You will get two Azure Functions:
    ```
    All guest codes will be displayed with the word Guest, first name, and start date of reservation, e.g., `Guest Robert 20240412`.
 
+## Known Issues with Wyze Locks
 
+- **API Call Delays:** API calls include timers to slow down the process as the system requires time when calling the locks.
+- **Code Name Formatting:** Occasionally, spaces in the names of the codes are removed.
+- **Name Display Issues:** Sometimes, names do not appear, but they are present if you check via the API.
+- **Synchronization Problems:** If something gets out of sync, you may need to delete all guest codes and re-sync.
 
 ### First Time Local
 
