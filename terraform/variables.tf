@@ -99,7 +99,7 @@ variable "always_send_slack_summary" {
   type = bool
 }
 
-variable "slack_verification_token" {
+variable "slack_signing_secret" {
   description    = "Slack command token"
   type           = string
 }

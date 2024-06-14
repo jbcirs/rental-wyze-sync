@@ -15,14 +15,14 @@ LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'tru
 VAULT_URL = os.environ["VAULT_URL"]
 
 if LOCAL_DEVELOPMENT:
-    SLACK_VERIFICATION_TOKEN = os.environ['SLACK_VERIFICATION_TOKEN']
+    SLACK_SIGNING_SECRET = os.environ['SLACK_SIGNING_SECRET']
 else:
     # Azure Key Vault client
     credential = DefaultAzureCredential()
     client = SecretClient(vault_url=VAULT_URL, credential=credential)
 
     # Fetch secrets from Key Vault
-    SLACK_VERIFICATION_TOKEN = client.get_secret("SLACK-VERIFICATION-TOKEN").value
+    SLACK_SIGNING_SECRET = client.get_secret("SLACK-SIGNING-SECRET").value
     SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
 
 if not NON_PROD:
@@ -67,7 +67,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
 # Initialize the Slack app
 slack_app = App(
     token=SLACK_TOKEN,
-    signing_secret=SLACK_VERIFICATION_TOKEN
+    signing_secret=SLACK_SIGNING_SECRET
 )
 
 # Define the /lock command handler
