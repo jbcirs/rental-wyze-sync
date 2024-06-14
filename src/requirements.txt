@@ -9,3 +9,4 @@ azure-keyvault-secrets==4.8.0
 cffi
 azure-data-tables==12.5.0
 pytz==2024.1
+slack-bolt==1.19.0

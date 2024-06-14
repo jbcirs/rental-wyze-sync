@@ -4,6 +4,8 @@ import json
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
+from slack_bolt import App
+from slack_bolt.adapter.azure_functions import AzureFunctionsAdapter
 
 
 app = func.FunctionApp()
@@ -21,6 +23,7 @@ else:
 
     # Fetch secrets from Key Vault
     SLACK_VERIFICATION_TOKEN = client.get_secret("SLACK-VERIFICATION-TOKEN").value
+    SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
 
 if not NON_PROD:
     @app.schedule(schedule="0 0 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
@@ -59,60 +62,37 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
-    
+
+
+# Initialize the Slack app
+slack_app = App(
+    token=SLACK_TOKEN,
+    signing_secret=SLACK_VERIFICATION_TOKEN
+)
+
+# Define the /lock command handler
+@slack_app.command("/lock")
+def handle_lock_command(ack, body, respond):
+    ack()
+    user_id = body["user_id"]
+    text = body["text"]
+    respond(f"Lock command received from <@{user_id}> with text: {text}")
+
+# FastAPI app
+fast_app = FastAPI()
+
+@fast_app.post("/api/lock_command")
+async def lock_command(req: func.HttpRequest) -> func.HttpResponse:
+    handler = AzureFunctionsHandler(slack_app)
+    return handler.handle(req)
+
 @app.function_name(name="Slack_Command_Lock")
 @app.route(route="slack_command_lock", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.ANONYMOUS)
 def slack_command_lock(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request Slack Commnd Lock.')
 
-    property_names = [
-        "Property1 - Front Door",
-        "Property2 - Front Door",
-        "Property3 - Front Door"
-    ]
-
-    # Parse the request body
-    try:
-        req_body = req.get_json()
-    except ValueError:
-        return func.HttpResponse("Invalid request", status_code=400)
-    
-    logging.info(f"req_body: {req_body}")
-    command_text = req_body.get('text', '').strip()
-    logging.info(f"command_text: {command_text}")
-
-    # Verify the Slack token
-    slack_token = req_body.get('token')
-    logging.info(f"token: {slack_token}")
-    expected_token = os.getenv('SLACK_VERIFICATION_TOKEN')
-    if slack_token != expected_token:
-        return func.HttpResponse("Unauthorized request", status_code=401)
-    
-    # Get the text command from the request
-    command_text = req_body.get('text', '').strip()
-
-    if command_text == 'help':
-        response_text = (
-            "Available commands:\n"
-            "• help: Show this help message\n"
-            "• list: List all property names"
-        )
-    elif command_text == 'list':
-        response_text = "Property names:\n" + "\n".join(property_names)
-    else:
-        response_text = (
-            "Unknown command. Available commands:\n"
-            "• help: Show this help message\n"
-            "• list: List all property names"
-        )
-
-    return func.HttpResponse(
-        json.dumps({
-            "response_type": "in_channel",  # public to the channel
-            "text": response_text
-        }),
-        mimetype="application/json"
-    )
+    handler = AzureFunctionsHandler(slack_app)
+    return handler.handle(req)
     
 @app.function_name(name="Property_List")
 @app.route(route="property_list", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.FUNCTION)
