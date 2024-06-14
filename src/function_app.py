@@ -78,9 +78,12 @@ def slack_command_lock(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse("Invalid request", status_code=400)
     
     logging.info(f"req_body: {req_body}")
+    command_text = req_body.get('text', '').strip()
+    logging.info(f"command_text: {command_text}")
 
     # Verify the Slack token
     slack_token = req_body.get('token')
+    logging.info(f"token: {slack_token}")
     expected_token = os.getenv('SLACK_VERIFICATION_TOKEN')
     if slack_token != expected_token:
         return func.HttpResponse("Unauthorized request", status_code=401)
