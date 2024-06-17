@@ -6,7 +6,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from slack_bolt import App
 from slack_bolt.adapter.fastapi import SlackRequestHandler
-from fastapi import FastAPI
+#from fastapi import FastAPI
 
 
 app = func.FunctionApp()
@@ -65,28 +65,28 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
 
 
-# Define the /lock command handler
-@app.command("/lock")
-def handle_lock_command(ack, body, respond):
-    ack()
-    user_id = body["user_id"]
-    text = body["text"]
-    respond(f"Lock command received from <@{user_id}> with text: {text}")
+# # Define the /lock command handler
+# @app.command("/lock")
+# def handle_lock_command(ack, body, respond):
+#     ack()
+#     user_id = body["user_id"]
+#     text = body["text"]
+#     respond(f"Lock command received from <@{user_id}> with text: {text}")
 
-# FastAPI app
-fast_app = FastAPI()
-handler = SlackRequestHandler(app)
+# # FastAPI app
+# fast_app = FastAPI()
+# handler = SlackRequestHandler(app)
 
-@fast_app.post("/slack_command_lock")
-async def lock_command(request: func.HttpRequest) -> func.HttpResponse:
-    return await handler.handle(request)
+# @fast_app.post("/slack_command_lock")
+# async def lock_command(request: func.HttpRequest) -> func.HttpResponse:
+#     return await handler.handle(request)
 
-@app.function_name(name="Slack_Command_Lock")
-@app.route(route="slack_command_lock", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.ANONYMOUS)
-async def slack_command_lock(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('HTTP trigger function processed a request Slack Commnd Lock.')
+# @app.function_name(name="Slack_Command_Lock")
+# @app.route(route="slack_command_lock", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.ANONYMOUS)
+# async def slack_command_lock(req: func.HttpRequest) -> func.HttpResponse:
+#     logging.info('HTTP trigger function processed a request Slack Commnd Lock.')
 
-    return await handler.handle(req)
+#     return await handler.handle(req)
     
 @app.function_name(name="Property_List")
 @app.route(route="property_list", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.FUNCTION)
