@@ -34,6 +34,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     WYZE_API_DELAY_SECONDS = var.wyze_api_delay_seconds
     STORAGE_ACCOUNT_NAME = azurerm_storage_account.storage.name
     ALWAYS_SEND_SLACK_SUMMARY = var.always_send_slack_summary
+    SMARTTHINGS_TOKEN = var.smartthings_token
   }
 
   depends_on = [

@@ -120,3 +120,11 @@ resource "azurerm_key_vault_secret" "SLACK_SIGNING_SECRET" {
 
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
 }
+
+resource "azurerm_key_vault_secret" "SMARTTHINGS_TOKEN" {
+  name         = "SMARTTHINGS-TOKEN"
+  value        = var.smartthings_token
+  key_vault_id = azurerm_key_vault.key_vault.id
+
+  depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
+}

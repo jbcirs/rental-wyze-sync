@@ -10,6 +10,7 @@ from hospitable import authenticate_hospitable, get_properties, get_reservations
 from slack_notify import send_slack_message
 import brands.wyze.lock_sync as wyze_lock
 from brands.wyze.wyze import get_wyze_token
+import brands.smartthings.lock_sync as smartthings_lock
 
 # Configuration
 VAULT_URL = os.environ["VAULT_URL"]
@@ -75,6 +76,7 @@ def process_reservations(delete_all_guest_codes=False):
                 
             # Call Locks
             wyze_lock.sync(locks_client, lock_name, property_name, reservations, current_time, timezone, delete_all_guest_codes)
+            smartthings_lock.sync(lock_name, property_name, reservations, current_time)
 
     except Exception as e:
         logging.error(f"Error in function: {str(e)}")

@@ -63,7 +63,7 @@ def sync(locks_client, lock_name, property_name, reservations, current_time, tim
                     if delete_lock_code(locks_client, lock_mac, code.id):
                         deletions.append(code.name)
                     else:
-                        errors.append(f"Deleting Code for {label}")
+                        errors.append(f"Deleting Code for {code.name}")
                     
                     deleted_codes = True
 

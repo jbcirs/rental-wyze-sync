@@ -1,7 +1,7 @@
 
 # Syncing Rental Wyze Devices
 
-This app will synchronize Wyze devices for rental use. This Azure Function looks one week in advance from your Hospitable calendar and adds, updates, or deletes codes into Wyze locks.
+This app will synchronize Wyze devices for rental use. This Azure Function looks one week in advance from your Hospitable calendar and adds, updates, or deletes codes into Wyze or SmartThings locks.
 
 ## Setup
 
@@ -65,6 +65,7 @@ WYZE_EMAIL
 WYZE_KEY_ID
 WYZE_PASSWORD
 SLACK_SIGNING_SECRET
+SMARTTHINGS_TOKEN
 ```
 
 - `AZURE_AD_CLIENT_ID` is the app_id from the JSON object in step 2.
@@ -75,6 +76,7 @@ SLACK_SIGNING_SECRET
 - `RESOURCE_GROUP` can be named anything as this is the main name of your app, e.g., `lock-sync`.
 - `SLACK_TOKEN` will start with `xoxb-`
 - `SLACK_SIGNING_SECRET` this will be used to verify that requests come from Slack.
+- `SMARTTHINGS_TOKEN` this is the personal access token to your [SmartThings](https://account.smartthings.com/tokens) account.
 
 ### 7. Deploy the Azure Functions
 
