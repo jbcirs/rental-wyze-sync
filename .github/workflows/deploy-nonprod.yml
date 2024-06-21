@@ -6,8 +6,9 @@ concurrency:
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches-ignore:
+    - main
+    - master
 
 permissions:
   id-token: write
