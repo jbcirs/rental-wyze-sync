@@ -9,6 +9,9 @@ on:
     branches-ignore:
     - main
     - master
+  
+    tags:
+    - deploy
 
 permissions:
   id-token: write

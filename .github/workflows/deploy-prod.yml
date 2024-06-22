@@ -10,6 +10,9 @@ on:
       - main
       - master
 
+    tags:
+    - deploy
+
 permissions:
   id-token: write
   contents: read
