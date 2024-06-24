@@ -65,9 +65,9 @@ def sync(locks_client, lock_name, property_name, reservations, current_time, tim
                 permission = code.permission
                 if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < datetime.now()):
                     if delete_lock_code(locks_client, lock_mac, code.id):
-                        deletions.append(code.name)
+                        deletions.append(f"{lock_name}: {code.name}")
                     else:
-                        errors.append(f"Deleting Code for {code.name}")
+                        errors.append(f"Deleting Code for {lock_name}: {code.name}")
                     
                     deleted_codes = True
 
@@ -76,7 +76,6 @@ def sync(locks_client, lock_name, property_name, reservations, current_time, tim
             time.sleep(WYZE_API_DELAY_SECONDS)   # Slow down API calls for Wyze locks
             existing_codes = get_lock_codes(locks_client, lock_mac)
 
-        
         # Process reservations
         for reservation in reservations:
             guest_name = reservation['guest']

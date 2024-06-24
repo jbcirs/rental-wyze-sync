@@ -126,7 +126,6 @@ def process_reservations(delete_all_guest_codes=False):
 
             # Process the Locks property
             locks = json.loads(property['Locks'])
-            print(locks)
 
             for lock in locks:
                 print(f"Processing lock: {lock['brand']} - {lock['name']}")
@@ -142,8 +141,8 @@ def process_reservations(delete_all_guest_codes=False):
                 property_additions.extend(additions)
                 property_errors.extend(errors)
 
-            if ALWAYS_SEND_SLACK_SUMMARY or any([deletions, updates, additions, errors]):
-                send_summary_slack_message(property_name, deletions, updates, additions, errors)
+            if ALWAYS_SEND_SLACK_SUMMARY or any([property_deletions, property_updates, property_additions, property_errors]):
+                send_summary_slack_message(property_name, property_deletions, property_updates, property_additions, property_errors)
 
 
     except Exception as e:
