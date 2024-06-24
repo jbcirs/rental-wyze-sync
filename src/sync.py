@@ -128,7 +128,7 @@ def process_reservations(delete_all_guest_codes=False):
             locks = json.loads(property['Locks'])
 
             for lock in locks:
-                print(f"Processing lock: {lock['brand']} - {lock['name']}")
+                logging.info(f"Processing lock: {lock['brand']} - {lock['name']}")
 
                 if lock['brand'] == WYZE:
                     deletions, updates, additions, errors = wyze_lock.sync(wyze_locks_client, lock['name'], property_name, reservations, current_time, timezone, delete_all_guest_codes)

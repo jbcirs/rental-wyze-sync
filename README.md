@@ -86,13 +86,28 @@ Run the `Deploy Prod` GitHub Action to deploy the Azure Functions and start runn
 
 Run `Cleanup Prod` to remove the deployment.
 
-### 9. Ensure Property Name Consistency
+### 9. Adding Properties and Locks to Azure Storage Table
 
-Make sure all your properties in Hospitable and the Wyze Locks are named the same. The Wyze app locks need to end with `- FD`.
+Each lock will need to be added to the Azure Storage Table called `properties`.
+
+- PartitionKey: PMS property name
+- RowKey: PMS System
+- Location: Location name in SmartThings
+- Active: `true` or `false` flag
+- Locks: is a list of locks by brand and lock name
 
 Example:
+Known Values
 - Hospitable Name: `Boston - Main St`
 - Wyze Lock Name: `Boston - Main St - FD`
+- Smrthings Location `Boston Main st`
+- Smrthings Lock Name: `Backdoor`
+
+Table Object in JSON
+```json
+{ "PartitionKey": "Boston - Main St", "RowKey": "Hospitable", "Active": true, "Location": "Boston Main St", "Locks": [ { "brand": "wyze", "name": "Boston - Main St - FD" }, { "brand": "smartthings", "name": "Backdoor" } ] }
+```
+
 
 ## Azure Functions
 
