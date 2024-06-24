@@ -2,6 +2,7 @@ import logging
 import os
 import time
 import pytz
+import json
 from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -11,6 +12,7 @@ from slack_notify import send_slack_message
 import brands.wyze.lock_sync as wyze_lock
 from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.lock_sync as smartthings_lock
+from azure.data.tables import TableServiceClient
 
 # Configuration
 VAULT_URL = os.environ["VAULT_URL"]
@@ -30,6 +32,41 @@ else:
 
     # Fetch secrets from Key Vault
     STORAGE_ACCOUNT_KEY = client.get_secret("STORAGE-ACCOUNT-KEY").value
+
+def active_property_locks():
+    table_name = "properties"
+
+
+    # Initialize the Table service client
+    table_service_client = TableServiceClient.from_connection_string(conn_str=STORAGE_ACCOUNT_KEY)
+    table_client = table_service_client.get_table_client(table_name)
+
+    try:
+        # Query to get all active entries
+        filter_query = "Active eq true"
+        active_entries = table_client.query_entities(filter=filter_query)
+
+        # Process each active entry
+        for entry in active_entries:
+            logging.info(f"Processing entry with PartitionKey: {entry['PartitionKey']}, RowKey: {entry['RowKey']}")
+            
+            # Check if the 'Locks' property exists and is not empty
+            if 'Locks' in entry and entry['Locks']:
+                try:
+                    # Process the Locks property
+                    locks = json.loads(entry['Locks'])
+                    for lock in locks:
+                        logging.info(f"Processing lock: {lock['brand']} - {lock['name']}")
+                except json.JSONDecodeError as json_err:
+                    logging.error(f"JSON decoding error for entry {entry['RowKey']}: {str(json_err)}")
+                except Exception as e:
+                    logging.error(f"Error processing locks for entry {entry['RowKey']}: {str(e)}")
+            else:
+                logging.warning(f"No 'Locks' property found or 'Locks' property is empty for entry {entry['RowKey']}")
+
+    except Exception as e:
+        logging.error(f"Error retrieving or processing entries: {str(e)}")
+
 
 def process_reservations(delete_all_guest_codes=False):
     logging.info('Processing reservations.')
