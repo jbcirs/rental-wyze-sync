@@ -3,7 +3,7 @@ import os
 import time
 import pytz
 from datetime import datetime
-from slack_notify import send_slack_message, send_summary_slack_message
+from slack_notify import send_slack_message
 from utilty import format_datetime
 from brands.smartthings.smartthings import *
 import utilty
@@ -19,6 +19,11 @@ ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false')
 
 def sync(lock_name, property_name, location, reservations, current_time):
     logging.info('Processing SmartThings reservations.')
+    deletions = []
+    updates = []
+    additions = []
+    errors = []
+    active_guest_user_names = []
 
     try:
         location_id = find_location_by_name(location)
@@ -35,13 +40,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
         if lock is None:
             send_slack_message(f"Unable to fetch lock for {lock_name} at {property_name}.")
             return
-
-        deletions = []
-        updates = []
-        additions = []
-        errors = []
-        active_guest_user_names = []
-
+        
         # Process reservations
         for reservation in reservations:
             guest_name = reservation['guest']
@@ -57,9 +56,9 @@ def sync(lock_name, property_name, location, reservations, current_time):
                 if not find_user_id_by_name(lock, label):
                     logging.info(f"ADD: {property_name}; label: {label}")
                     if add_user_code(lock, user_name, phone_last4):
-                        additions.append(label)
+                        additions.append(f"{lock_name}: {label}")
                     else:
-                        errors.append(f"Adding Code for {label}")
+                        errors.append(f"Adding Code for {lock_name}: {label}")
 
         # Delete old guest codes
         guest_user_names = find_all_guest_user_names(lock)
@@ -70,15 +69,14 @@ def sync(lock_name, property_name, location, reservations, current_time):
                 user_id = find_user_id_by_name(lock,user_name)
 
                 if delete_user_code(lock, user_id):
-                    deletions.append(user_name)
+                    deletions.append(f"{lock_name}: {label}")
                 else:
-                    errors.append(f"Deleting Code for {user_name}")
-
-
-
-        if ALWAYS_SEND_SLACK_SUMMARY or any([deletions, updates, additions, errors]):
-            send_summary_slack_message(property_name, deletions, updates, additions, errors)
+                    errors.append(f"Deleting Code for {lock_name}: {user_name}")
 
     except Exception as e:
-        logging.error(f"Error in Wyze function: {str(e)}")
-        send_slack_message(f"Error in Wyze function: {str(e)}")
+        error = f"Error in SmatThings function: {str(e)}"
+        logging.error(error)
+        errors.append(error)
+        send_slack_message(f"Error in SmatThings function: {str(e)}")
+
+    return deletions, updates, additions, errors

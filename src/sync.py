@@ -8,7 +8,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from wyze_sdk import Client
 from hospitable import authenticate_hospitable, get_properties, get_reservations
-from slack_notify import send_slack_message
+from slack_notify import send_slack_message, send_summary_slack_message
 import brands.wyze.lock_sync as wyze_lock
 from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.lock_sync as smartthings_lock
@@ -72,7 +72,6 @@ def active_property_locks():
     
     return None
 
-
 def process_reservations(delete_all_guest_codes=False):
     logging.info('Processing reservations.')
 
@@ -103,6 +102,10 @@ def process_reservations(delete_all_guest_codes=False):
         table_properties = active_property_locks()
         
         for property in table_properties:
+            property_deletions = []
+            property_updates = []
+            property_additions = []
+            property_errors = []
             property_name = property['PartitionKey']
 
             if property["RowKey"] == HOSPITABLE:
@@ -129,9 +132,18 @@ def process_reservations(delete_all_guest_codes=False):
                 print(f"Processing lock: {lock['brand']} - {lock['name']}")
 
                 if lock['brand'] == WYZE:
-                    wyze_lock.sync(wyze_locks_client, lock['name'], property_name, reservations, current_time, timezone, delete_all_guest_codes)
+                    deletions, updates, additions, errors = wyze_lock.sync(wyze_locks_client, lock['name'], property_name, reservations, current_time, timezone, delete_all_guest_codes)
+                    
                 elif lock['brand'] == SMARTTHINGS:
-                    smartthings_lock.sync(lock['name'], property_name, property["Location"], reservations, current_time)
+                    deletions, updates, additions, errors = smartthings_lock.sync(lock['name'], property_name, property["Location"], reservations, current_time)
+                
+                property_deletions.extend(deletions)
+                property_updates.extend(updates)
+                property_additions.extend(additions)
+                property_errors.extend(errors)
+
+            if ALWAYS_SEND_SLACK_SUMMARY or any([deletions, updates, additions, errors]):
+                send_summary_slack_message(property_name, deletions, updates, additions, errors)
 
 
     except Exception as e:
