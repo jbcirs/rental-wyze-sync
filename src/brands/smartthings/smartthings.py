@@ -159,26 +159,26 @@ def print_locks_with_users(locks_with_users):
         print(f"- {user_id}: {user_info}")
     print("")
 
-def main():
-    logging.info("Start Samrthings")
+# def main():
+#     logging.info("Start Samrthings")
 
-    location_name = "Paradise Cove"
-    location_id = find_location_by_name(location_name)
-    locks_with_users = get_locks(location_id)
-    lock_name = "Master Bath Closet Door Lock"
-    lock = find_lock_by_name(locks_with_users,lock_name)
+#     location_name = "Paradise Cove"
+#     location_id = find_location_by_name(location_name)
+#     locks_with_users = get_locks(location_id)
+#     lock_name = "Master Bath Closet Door Lock"
+#     lock = find_lock_by_name(locks_with_users,lock_name)
 
-    print(f"Lock: {lock}")
+#     print(f"Lock: {lock}")
 
-     # Example: Adding a new user code
-    user_code = "8832"
-    user_name = "Guest Joe 20240625"
-    #add_user_code(lock, user_name, user_code)
-    #time.sleep(60)
+#      # Example: Adding a new user code
+#     user_code = "8832"
+#     user_name = "Guest Joe 20240625"
+#     #add_user_code(lock, user_name, user_code)
+#     #time.sleep(60)
 
     
-    # Example: Deleting a user code
-    #delete_user_code(lock, user_name)
+#     # Example: Deleting a user code
+#     #delete_user_code(lock, user_name)
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

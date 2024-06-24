@@ -8,7 +8,6 @@ from utilty import format_datetime
 from brands.smartthings.smartthings import *
 import utilty
 
-
 # Configuration
 VAULT_URL = os.environ["VAULT_URL"]
 CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
@@ -18,11 +17,11 @@ LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'tru
 TIMEZONE = os.environ['TIMEZONE']
 ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
 
-def sync(lock_name, property_name, reservations, current_time):
+def sync(lock_name, property_name, location, reservations, current_time):
     logging.info('Processing SmartThings reservations.')
 
     try:
-        location_id = find_location_by_name(property_name)
+        location_id = find_location_by_name(location)
         if location_id is None:
             send_slack_message(f"Unable to fetch location ID for {lock_name} at {property_name}.")
             return
@@ -51,9 +50,10 @@ def sync(lock_name, property_name, reservations, current_time):
             label = f"Guest {guest_first_name}"
             label += f" {reservation['checkin'][:10].replace('-', '')}"
             active_guest_user_names.append(label)
+            checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS, TIMEZONE)
             checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS, TIMEZONE)
 
-            if current_time < checkout_time:
+            if checkin_time <= current_time < checkout_time:
                 if not find_user_id_by_name(lock, label):
                     logging.info(f"ADD: {property_name}; label: {label}")
                     if add_user_code(lock, user_name, phone_last4):

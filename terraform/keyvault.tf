@@ -105,9 +105,9 @@ resource "azurerm_key_vault_secret" "slack_token" {
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
 }
 
-resource "azurerm_key_vault_secret" "STORAGE_ACCOUNT_KEY" {
-  name         = "STORAGE-ACCOUNT-KEY"
-  value        = azurerm_storage_account.storage.primary_access_key
+resource "azurerm_key_vault_secret" "STORAGE_CONNECTION_STRING" {
+  name         = "STORAGE-CONNECTION-STRING"
+  value        = azurerm_storage_account.storage.primary_connection_string
   key_vault_id = azurerm_key_vault.key_vault.id
 
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
