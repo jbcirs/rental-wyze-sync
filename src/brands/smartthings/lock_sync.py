@@ -69,7 +69,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
                 user_id = find_user_id_by_name(lock,user_name)
 
                 if delete_user_code(lock, user_id):
-                    deletions.append(f"{lock_name}: {label}")
+                    deletions.append(f"{lock_name}: {user_name}")
                 else:
                     errors.append(f"Deleting Code for {lock_name}: {user_name}")
 
