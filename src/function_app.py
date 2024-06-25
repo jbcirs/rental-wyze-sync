@@ -7,9 +7,12 @@ from azure.keyvault.secrets import SecretClient
 from slack_bolt import App
 from slack_bolt.adapter.fastapi import SlackRequestHandler
 #from fastapi import FastAPI
+from slack_comands import bp01
 
 
 app = func.FunctionApp()
+
+app.register_functions(bp01)
 
 NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
