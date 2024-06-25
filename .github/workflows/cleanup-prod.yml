@@ -29,6 +29,7 @@ jobs:
       TF_VAR_slack_token: ${{ secrets.SLACK_TOKEN }}
       TF_VAR_aad_objectId_admin: ${{ secrets.AAD_OBJECTID_ADMIN }}
       TF_VAR_slack_signing_secret: ${{ secrets.SLACK_SIGNING_SECRET }}
+      TF_VAR_smartthings_token: ${{ secrets.SMARTTHINGS_TOKEN }}
       TF_VAR_app_name: 'sync-locks'
       TF_VAR_app_name_no_spaces: 'synclocks'
       TF_VAR_non_prod: 'true'

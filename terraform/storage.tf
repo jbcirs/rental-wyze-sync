@@ -10,7 +10,7 @@ resource "azurerm_storage_account" "storage" {
   }
 }
 
-resource "azurerm_storage_table" "locks" {
-  name                = "locks"
+resource "azurerm_storage_table" "properties" {
+  name                = "properties"
   storage_account_name = azurerm_storage_account.storage.name
 }

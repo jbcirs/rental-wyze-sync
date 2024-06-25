@@ -103,3 +103,8 @@ variable "slack_signing_secret" {
   description    = "Slack command token"
   type           = string
 }
+
+variable "smartthings_token" {
+  description    = "SmartThings token"
+  type           = string
+}
