@@ -38,7 +38,7 @@ def get_new_token():
         try:
             client.set_secret("HOSPITABLE-TOKEN", token)
         except Exception as e:
-            print(f"Error in update Hospitable token: {str(e)}")
+            logging.error(f"Error in update Hospitable token: {str(e)}")
         return token
     logging.error('Failed to authenticate with Hospitable API.')
     return None
@@ -57,8 +57,10 @@ def token_is_valid(token):
 
 def authenticate_hospitable(token=None):
     if token and token_is_valid(token):
+        logging.info('Hospitable token valid')
         return token
     else:
+        logging.info('Get new Hospitable token')
         return get_new_token()
 
 
