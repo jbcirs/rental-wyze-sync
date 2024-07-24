@@ -48,13 +48,82 @@ def find_location_by_name(location_name):
 def get_devices(location_id):
     response = requests.get(f'{BASE_URL}/devices?locationId={location_id}', headers=HEADERS)
     response.raise_for_status()
-    return response.json()['items']
+    if response.status_code == 200:
+        return response.json()['items']
+    else:
+        logging.info(f"Failed to retrieve devices. Status code: {response.status_code}")
+        logging.info(f"Response: {response.text}")
+        return None
+
+def get_device_id_by_label(location_id,label):
+    devices = get_devices(location_id)
+
+    for device in devices:
+        if device['label'] == label:
+            return device['deviceId']
+    logging.info(f"No device label found called: {label} at {location_id}")
+    return None
+
+def get_device_id_by_name(location_id,name):
+    devices = get_devices(location_id)
+
+    for device in devices:
+        if device['name'] == name:
+            return device['deviceId']
+    logging.info(f"No device label found called: {name} at {location_id}")
+    return None
 
 def get_device_status(device_id):
     status_url = f'{BASE_URL}/devices/{device_id}/status'
     response = requests.get(status_url, headers=HEADERS)
     response.raise_for_status()
     return response.json()
+
+def switch(device_id, state=True):
+    if device_id is None:
+        logging.info(f"Device '{device_id}' not found.")
+        return
+
+    url = f"{BASE_URL}/devices/{device_id}/commands"
+    command = "on" if state else "off"
+    payload = {
+        "commands": [
+            {
+                "component": "main",
+                "capability": "switch",
+                "command": command
+            }
+        ]
+    }
+
+# def set_thermostat_mode(device_id, mode="home"):
+#     if device_id is None:
+#         logging.info(f"Device '{device_id}' not found.")
+#         return
+
+#     url = f"{BASE_URL}/devices/{device_id}/commands"
+#     payload = {
+#         "commands": [
+#             {
+#                 "component": "main",
+#                 "capability": "thermostatMode",
+#                 "command": "setThermostatMode",
+#                 "arguments": [mode]
+#             }
+#         ]
+#     }
+
+    response = requests.post(url, headers=HEADERS, json=payload)
+
+    if response.status_code != 200:
+        logging.info(f"Failed to set thermostat mode to {mode}. Status Code: {response.status_code}")
+        logging.info(f"Response: {response.content.decode()}")
+        return False
+
+    response.raise_for_status()
+    return True
+
+
 
 def filter_locks(devices):
     locks = [device for device in devices if any(capability['id'] == 'lockCodes' for capability in device['components'][0]['capabilities'])]

@@ -15,3 +15,5 @@ wyze_api_delay_seconds = 10
 timezone = "America/Chicago"
 
 always_send_slack_summary = false
+
+hospitable_token = ""

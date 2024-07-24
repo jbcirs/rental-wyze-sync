@@ -49,6 +49,11 @@ variable "hospitable_password" {
   type        = string
 }
 
+variable "hospitable_token" {
+  description = "Hospitable password"
+  type        = string
+}
+
 variable "wyze_email" {
   description = "Wyze email"
   type        = string

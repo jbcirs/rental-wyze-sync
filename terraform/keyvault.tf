@@ -43,7 +43,7 @@ resource "azurerm_key_vault_access_policy" "sync_locks_functions_access_policy" 
   object_id    = azurerm_linux_function_app.sync_locks_functions.identity.0.principal_id
 
   secret_permissions = [
-    "Get"
+    "Get", "Set"
   ]
 
   depends_on = [azurerm_key_vault.key_vault]
@@ -60,6 +60,14 @@ resource "azurerm_key_vault_secret" "hospitable_email" {
 resource "azurerm_key_vault_secret" "hospitable_password" {
   name         = "HOSPITABLE-PASSWORD"
   value        = var.hospitable_password
+  key_vault_id = azurerm_key_vault.key_vault.id
+
+  depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
+}
+
+resource "azurerm_key_vault_secret" "HOSPITABLE_TOKEN" {
+  name         = "HOSPITABLE-TOKEN"
+  value        = var.hospitable_token
   key_vault_id = azurerm_key_vault.key_vault.id
 
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
@@ -128,3 +136,4 @@ resource "azurerm_key_vault_secret" "SMARTTHINGS_TOKEN" {
 
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
 }
+

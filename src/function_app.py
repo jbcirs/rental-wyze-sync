@@ -63,30 +63,6 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
-
-
-# # Define the /lock command handler
-# @app.command("/lock")
-# def handle_lock_command(ack, body, respond):
-#     ack()
-#     user_id = body["user_id"]
-#     text = body["text"]
-#     respond(f"Lock command received from <@{user_id}> with text: {text}")
-
-# # FastAPI app
-# fast_app = FastAPI()
-# handler = SlackRequestHandler(app)
-
-# @fast_app.post("/slack_command_lock")
-# async def lock_command(request: func.HttpRequest) -> func.HttpResponse:
-#     return await handler.handle(request)
-
-# @app.function_name(name="Slack_Command_Lock")
-# @app.route(route="slack_command_lock", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.ANONYMOUS)
-# async def slack_command_lock(req: func.HttpRequest) -> func.HttpResponse:
-#     logging.info('HTTP trigger function processed a request Slack Commnd Lock.')
-
-#     return await handler.handle(req)
     
 @app.function_name(name="Property_List")
 @app.route(route="property_list", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.FUNCTION)
@@ -120,38 +96,3 @@ def property_list(req: func.HttpRequest) -> func.HttpResponse:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
     
-
-
-# @app.function_name(name="DeleteGuestCodesFunction")
-# @app.route(route="deletecodes", methods=["POST"], auth_level=func.AuthLevel.FUNCTION)
-# def delete_guest_codes(req: func.HttpRequest) -> func.HttpResponse:
-#     logging.info('Python HTTP trigger function processed a request.')
-
-#     try:
-#         req_body = req.get_json()
-#     except ValueError:
-#         return func.HttpResponse(
-#             "Invalid JSON body",
-#             status_code=400
-#         )
-
-#     delete_all_guest_codes = req_body.get('delete_all_guest_codes')
-
-#     if delete_all_guest_codes is not None:
-#         if delete_all_guest_codes:
-#             logging.info("Deleting all guest codes.")
-#             # Implement the deletion logic here
-#         else:
-#             logging.info("Not deleting guest codes.")
-
-#         return func.HttpResponse(
-#             json.dumps({"message": "Request processed successfully"}),
-#             status_code=200,
-#             mimetype="application/json"
-#         )
-#     else:
-#         return func.HttpResponse(
-#             json.dumps({"error": "Missing 'delete_all_guest_codes' field"}),
-#             status_code=400,
-#             mimetype="application/json"
-#         )

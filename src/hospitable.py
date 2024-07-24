@@ -1,7 +1,8 @@
 import requests
 import logging
 import pytz
-from datetime import datetime, timedelta
+import jwt
+from datetime import datetime, timedelta, timezone
 import os
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -13,6 +14,7 @@ LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'tru
 if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
     HOSPITABLE_PASSWORD = os.environ["HOSPITABLE_PASSWORD"]
+    HOSPITABLE_TOKEN = os.environ["HOSPITABLE_TOKEN"]
 else:
     # Azure Key Vault client
     credential = DefaultAzureCredential()
@@ -21,8 +23,9 @@ else:
     # Fetch secrets from Key Vault
     HOSPITABLE_EMAIL = client.get_secret("HOSPITABLE-EMAIL").value
     HOSPITABLE_PASSWORD = client.get_secret("HOSPITABLE-PASSWORD").value
+    HOSPITABLE_TOKEN = client.get_secret("HOSPITABLE-TOKEN").value
 
-def authenticate_hospitable():
+def get_new_token():
     url = 'https://api.hospitable.com/v1/auth/login'
     payload = {
         'email': HOSPITABLE_EMAIL,
@@ -31,9 +34,33 @@ def authenticate_hospitable():
     }
     response = requests.post(url, json=payload)
     if response.status_code == 200 and 'token' in response.json().get('data', {}):
-        return response.json()['data']['token']
+        token = response.json()['data']['token']
+        try:
+            client.set_secret("HOSPITABLE-TOKEN", token)
+        except Exception as e:
+            print(f"Error in update Hospitable token: {str(e)}")
+        return token
     logging.error('Failed to authenticate with Hospitable API.')
     return None
+
+def token_is_valid(token):
+    try:
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+        exp_timestamp = decoded_token['exp']
+        exp_time = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+        return exp_time > datetime.now(tz=timezone.utc) + timedelta(minutes=15)
+    except jwt.ExpiredSignatureError:
+        return False
+    except jwt.DecodeError:
+        logging.error('Failed to decode JWT token.')
+        return False
+
+def authenticate_hospitable(token=None):
+    if token and token_is_valid(token):
+        return token
+    else:
+        return get_new_token()
+
 
 def get_properties(token):
     url = 'https://api.hospitable.com/v1/properties?pagination=false&transformer=simple'
