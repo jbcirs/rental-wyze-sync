@@ -7,7 +7,7 @@ slack_channel = "#locks-np"
 check_in_offset_hours = -1
 check_out_offset_hours = 1
 
-test_property_name = "Paradise Cove Enchanted Oaks - FD"
+test_property_name = "Paradise Cove Enchanted Oaks"
 
 
 wyze_api_delay_seconds = 10
