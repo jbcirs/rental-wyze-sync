@@ -39,7 +39,7 @@ if not NON_PROD:
         except Exception as e:
             logging.error(f"Error executing function: {str(e)}")
 
-@app.function_name(name="Sync Locks")
+@app.function_name(name="Sync_Locks")
 @app.route(route="trigger_sync_locks", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
@@ -65,7 +65,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
     
-@app.function_name(name="Sync Lights")
+@app.function_name(name="Sync_Lights")
 @app.route(route="trigger_sync_lights", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
