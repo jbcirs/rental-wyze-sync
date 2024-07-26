@@ -92,9 +92,12 @@ Each lock will need to be added to the Azure Storage Table called `properties`.
 
 - PartitionKey: PMS property name
 - RowKey: PMS System
-- Location: Location name in SmartThings
+- BrandSettings: Is a list of all settings need for a bran to run
+- Location: Will be gps coordinates (future)
 - Active: `true` or `false` flag
-- Locks: is a list of locks by brand and lock name
+- Locks: Is a list of locks by brand and lock name
+- Lights: Coming soon
+- Thermostats: Coming soon
 
 Example:
 Known Values
