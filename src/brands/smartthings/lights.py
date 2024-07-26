@@ -44,7 +44,7 @@ def sync(light, sunset, sunrise, property_name, location, reservations, current_
             send_slack_message(f"Unable to fetch {Device.Lights} for {light_name} at {property_name}.")
             return
 
-        if light['reservations_only']:     
+        if light['reservations_only']:
             # Process reservations
             for reservation in reservations:
                 checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS, TIMEZONE)
@@ -52,16 +52,16 @@ def sync(light, sunset, sunrise, property_name, location, reservations, current_
 
                 if checkin_time <= current_time < checkout_time:
                     if (light['start_time'] is not None and light['start_time'] >= current_time) or sunset:
-                        switch_light(light_id,True,light_name,property_name,updates,errors)
+                        switch_light(light_id, True, light_name, property_name, updates, errors)
                     elif (light['stop_time'] is not None and light['stop_time'] >= current_time) or sunrise:
-                        switch_light(light_id,False,light_name,property_name,updates,errors)
+                        switch_light(light_id, False, light_name, property_name, updates, errors)
                 else:
-                    switch_light(light_id,False,light_name,property_name,updates,errors)
+                    switch_light(light_id, False, light_name, property_name, updates, errors)
         else:
             if (light['start_time'] is not None and light['start_time'] >= current_time) or sunset:
-                switch_light(light_id,True,light_name,property_name,updates,errors)
+                switch_light(light_id, True, light_name, property_name, updates, errors)
             elif (light['stop_time'] is not None and light['stop_time'] >= current_time) or sunrise:
-                switch_light(light_id,False,light_name,property_name,updates,errors)
+                switch_light(light_id, False, light_name, property_name, updates, errors)
 
     except Exception as e:
         error = f"Error in SmatThings {Device.LIGHT} function: {str(e)}"

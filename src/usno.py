@@ -18,7 +18,7 @@ def get_data(lat, lng):
     
     return data
 
-def is_sun_going_down(lat, lng, minutes, timezone):
+def is_after_sunset(lat, lng, minutes, timezone):
     data = get_data(lat, lng)
 
     if not data:
@@ -35,11 +35,11 @@ def is_sun_going_down(lat, lng, minutes, timezone):
     sunset_time_local = pytz.utc.localize(sunset_time_utc).astimezone(local_timezone)
 
     current_time_local = datetime.now(local_timezone)
-    time_from_now = current_time_local + timedelta(minutes=minutes)
+    time_after_sunset = sunset_time_local + timedelta(minutes=minutes)
 
-    return current_time_local <= sunset_time_local <= time_from_now
+    return sunset_time_local <= current_time_local <= time_after_sunset
 
-def is_sun_risen(lat, lng, minutes, timezone):
+def is_past_sunrise(lat, lng, minutes, timezone):
     data = get_data(lat, lng)
 
     if not data:
@@ -56,9 +56,9 @@ def is_sun_risen(lat, lng, minutes, timezone):
     sunrise_time_local = pytz.utc.localize(sunrise_time_utc).astimezone(local_timezone)
 
     current_time_local = datetime.now(local_timezone)
-    time_before_now = current_time_local - timedelta(minutes=minutes)
+    time_after_sunrise = sunrise_time_local + timedelta(minutes=minutes)
 
-    return time_before_now <= sunrise_time_local <= current_time_local
+    return sunrise_time_local <= current_time_local <= time_after_sunrise
 
 # Example usage
 # latitude = 32.7767  # Latitude for Dallas, TX
