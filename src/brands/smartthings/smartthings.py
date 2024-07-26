@@ -96,33 +96,15 @@ def switch(device_id, state=True):
         ]
     }
 
-# def set_thermostat_mode(device_id, mode="home"):
-#     if device_id is None:
-#         logging.info(f"Device '{device_id}' not found.")
-#         return
-
-#     url = f"{BASE_URL}/devices/{device_id}/commands"
-#     payload = {
-#         "commands": [
-#             {
-#                 "component": "main",
-#                 "capability": "thermostatMode",
-#                 "command": "setThermostatMode",
-#                 "arguments": [mode]
-#             }
-#         ]
-#     }
-
     response = requests.post(url, headers=HEADERS, json=payload)
 
     if response.status_code != 200:
-        logging.info(f"Failed to set thermostat mode to {mode}. Status Code: {response.status_code}")
+        logging.info(f"Failed to switch. Status Code: {response.status_code}")
         logging.info(f"Response: {response.content.decode()}")
         return False
 
     response.raise_for_status()
     return True
-
 
 
 def filter_locks(devices):

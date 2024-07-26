@@ -33,8 +33,8 @@ def send_summary_slack_message(property_name, deletions, updates, additions, err
     if not deletions and not updates and not additions and not errors:
         message += "_No Changes_"
     else:
-        message += "Deleted Codes:\n" + ("\n".join([f"`{item}`" for item in deletions]) if deletions else "_-None-_") + "\n"
-        message += "Updated Codes:\n" + ("\n".join([f"`{item}`" for item in updates]) if updates else "_-None-_") + "\n"
-        message += "Added Codes:\n" + ("\n".join([f"`{item}`" for item in additions]) if additions else "_-None-_") + "\n"
+        message += "Deleted:\n" + ("\n".join([f"`{item}`" for item in deletions]) if deletions else "_-None-_") + "\n"
+        message += "Updated:\n" + ("\n".join([f"`{item}`" for item in updates]) if updates else "_-None-_") + "\n"
+        message += "Added:\n" + ("\n".join([f"`{item}`" for item in additions]) if additions else "_-None-_") + "\n"
         message += "Errors:\n" + ("\n".join([f"`{item}`" for item in errors]) if errors else "_-None-_") + "\n"
     send_slack_message(message)

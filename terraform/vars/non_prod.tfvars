@@ -2,7 +2,7 @@ environment = "non-prod"
 non_prod = true
 local_development = false
 
-slack_channel = "#locks-np"
+slack_channel = "#rentals-np"
 
 check_in_offset_hours = -1
 check_out_offset_hours = 1

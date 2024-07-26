@@ -113,7 +113,7 @@ Table Object in JSON
     "RowKey": "Hospitable",
     "Active": true,
     "BrandSettings": [ { "brand":"smartthings", "location":"Boston Main St" } ],
-    "Lights": {},
+    "Lights": [{"brand": "smartthings", "name": "String Lights", "reservations_only": true "minutes_before_sunset": 30, "minutes_after_sunrise": 30, "start_time":  "", "stop_time": ""}],
     "Location": {"latitude":"","longitude":""},
     "Locks": [ { "brand": "wyze", "name": "Boston - Main St - FD" }, { "brand": "smartthings", "name": "Backdoor" } ],
     "Thermostats": {},
