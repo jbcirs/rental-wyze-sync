@@ -43,7 +43,7 @@ resource "azurerm_key_vault_access_policy" "sync_locks_functions_access_policy" 
   object_id    = azurerm_linux_function_app.sync_locks_functions.identity.0.principal_id
 
   secret_permissions = [
-    "Get"
+    "Get", "Set"
   ]
 
   depends_on = [azurerm_key_vault.key_vault]
@@ -60,6 +60,14 @@ resource "azurerm_key_vault_secret" "hospitable_email" {
 resource "azurerm_key_vault_secret" "hospitable_password" {
   name         = "HOSPITABLE-PASSWORD"
   value        = var.hospitable_password
+  key_vault_id = azurerm_key_vault.key_vault.id
+
+  depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
+}
+
+resource "azurerm_key_vault_secret" "HOSPITABLE_TOKEN" {
+  name         = "HOSPITABLE-TOKEN"
+  value        = var.hospitable_token
   key_vault_id = azurerm_key_vault.key_vault.id
 
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
@@ -105,9 +113,9 @@ resource "azurerm_key_vault_secret" "slack_token" {
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
 }
 
-resource "azurerm_key_vault_secret" "STORAGE_ACCOUNT_KEY" {
-  name         = "STORAGE-ACCOUNT-KEY"
-  value        = azurerm_storage_account.storage.primary_access_key
+resource "azurerm_key_vault_secret" "STORAGE_CONNECTION_STRING" {
+  name         = "STORAGE-CONNECTION-STRING"
+  value        = azurerm_storage_account.storage.primary_connection_string
   key_vault_id = azurerm_key_vault.key_vault.id
 
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
@@ -120,3 +128,12 @@ resource "azurerm_key_vault_secret" "SLACK_SIGNING_SECRET" {
 
   depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
 }
+
+resource "azurerm_key_vault_secret" "SMARTTHINGS_TOKEN" {
+  name         = "SMARTTHINGS-TOKEN"
+  value        = var.smartthings_token
+  key_vault_id = azurerm_key_vault.key_vault.id
+
+  depends_on = [azurerm_key_vault.key_vault, azurerm_key_vault_access_policy.terraform]
+}
+

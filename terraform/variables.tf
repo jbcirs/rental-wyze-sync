@@ -49,6 +49,11 @@ variable "hospitable_password" {
   type        = string
 }
 
+variable "hospitable_token" {
+  description = "Hospitable password"
+  type        = string
+}
+
 variable "wyze_email" {
   description = "Wyze email"
   type        = string
@@ -101,5 +106,10 @@ variable "always_send_slack_summary" {
 
 variable "slack_signing_secret" {
   description    = "Slack command token"
+  type           = string
+}
+
+variable "smartthings_token" {
+  description    = "SmartThings token"
   type           = string
 }

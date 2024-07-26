@@ -1,7 +1,7 @@
 
 # Syncing Rental Wyze Devices
 
-This app will synchronize Wyze devices for rental use. This Azure Function looks one week in advance from your Hospitable calendar and adds, updates, or deletes codes into Wyze locks.
+This app will synchronize Wyze devices for rental use. This Azure Function looks one week in advance from your Hospitable calendar and adds, updates, or deletes codes into Wyze or SmartThings locks.
 
 ## Setup
 
@@ -65,6 +65,7 @@ WYZE_EMAIL
 WYZE_KEY_ID
 WYZE_PASSWORD
 SLACK_SIGNING_SECRET
+SMARTTHINGS_TOKEN
 ```
 
 - `AZURE_AD_CLIENT_ID` is the app_id from the JSON object in step 2.
@@ -75,6 +76,7 @@ SLACK_SIGNING_SECRET
 - `RESOURCE_GROUP` can be named anything as this is the main name of your app, e.g., `lock-sync`.
 - `SLACK_TOKEN` will start with `xoxb-`
 - `SLACK_SIGNING_SECRET` this will be used to verify that requests come from Slack.
+- `SMARTTHINGS_TOKEN` this is the personal access token to your [SmartThings](https://account.smartthings.com/tokens) account.
 
 ### 7. Deploy the Azure Functions
 
@@ -84,13 +86,40 @@ Run the `Deploy Prod` GitHub Action to deploy the Azure Functions and start runn
 
 Run `Cleanup Prod` to remove the deployment.
 
-### 9. Ensure Property Name Consistency
+### 9. Adding Properties and Locks to Azure Storage Table
 
-Make sure all your properties in Hospitable and the Wyze Locks are named the same. The Wyze app locks need to end with `- FD`.
+Each lock will need to be added to the Azure Storage Table called `properties`.
+
+- PartitionKey: PMS property name
+- RowKey: PMS System
+- BrandSettings: Is a list of all settings need for a bran to run
+- Location: Will be gps coordinates (future)
+- Active: `true` or `false` flag
+- Locks: Is a list of locks by brand and lock name
+- Lights: Coming soon
+- Thermostats: Coming soon
 
 Example:
+Known Values
 - Hospitable Name: `Boston - Main St`
 - Wyze Lock Name: `Boston - Main St - FD`
+- Smrthings Location `Boston Main st`
+- Smrthings Lock Name: `Backdoor`
+
+Table Object in JSON
+```json
+{
+    "PartitionKey": "Boston - Main St",
+    "RowKey": "Hospitable",
+    "Active": true,
+    "BrandSettings": [ { "brand":"smartthings", "location":"Boston Main St" } ],
+    "Lights": {},
+    "Location": {"latitude":"","longitude":""},
+    "Locks": [ { "brand": "wyze", "name": "Boston - Main St - FD" }, { "brand": "smartthings", "name": "Backdoor" } ],
+    "Thermostats": {},
+}
+```
+
 
 ## Azure Functions
 

@@ -28,6 +28,10 @@ WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
 
 def sync(locks_client, lock_name, property_name, reservations, current_time, timezone, delete_all_guest_codes=False):
     logging.info('Processing Wyze reservations.')
+    deletions = []
+    updates = []
+    additions = []
+    errors = []
 
     try:
         lock_info = get_lock_info(locks_client, lock_name)
@@ -61,9 +65,9 @@ def sync(locks_client, lock_name, property_name, reservations, current_time, tim
                 permission = code.permission
                 if delete_all_guest_codes or (permission.type == LockKeyPermissionType.DURATION and permission.end < datetime.now()):
                     if delete_lock_code(locks_client, lock_mac, code.id):
-                        deletions.append(code.name)
+                        deletions.append(f"{lock_name}: {code.name}")
                     else:
-                        errors.append(f"Deleting Code for {label}")
+                        errors.append(f"Deleting Code for {lock_name}: {code.name}")
                     
                     deleted_codes = True
 
@@ -72,7 +76,6 @@ def sync(locks_client, lock_name, property_name, reservations, current_time, tim
             time.sleep(WYZE_API_DELAY_SECONDS)   # Slow down API calls for Wyze locks
             existing_codes = get_lock_codes(locks_client, lock_mac)
 
-        
         # Process reservations
         for reservation in reservations:
             guest_name = reservation['guest']
@@ -97,9 +100,9 @@ def sync(locks_client, lock_name, property_name, reservations, current_time, tim
                 if not code:
                     logging.info(f"ADD: {property_name}; label: {label}")
                     if add_lock_code(locks_client, lock_mac, phone_last4, label, permission):
-                        additions.append(label)
+                        additions.append(f"{lock_name}: {label}")
                     else:
-                        errors.append(f"Adding Code for {label}")
+                        errors.append(f"Adding Code for {lock_name}: {label}")
                 else:
                     begin_utc = code.permission.begin.replace(tzinfo=pytz.utc)
                     end_utc = code.permission.end.replace(tzinfo=pytz.utc)
@@ -115,13 +118,14 @@ def sync(locks_client, lock_name, property_name, reservations, current_time, tim
                     if begin_utc != checkin_utc or end_utc != checkout_utc:
                         logging.info(f"UPDATE: {property_name}; label: {label}")
                         if update_lock_code(locks_client, lock_mac, code.id, phone_last4, label, permission):
-                            updates.append(label)
+                            updates.append(f"{lock_name}: {label}")
                         else:
-                            errors.append(f"Updating Code for {label}")
-
-        if ALWAYS_SEND_SLACK_SUMMARY or any([deletions, updates, additions, errors]):
-            send_summary_slack_message(property_name, deletions, updates, additions, errors)
+                            errors.append(f"Updating Code for {lock_name}: {label}")
 
     except Exception as e:
-        logging.error(f"Error in Wyze function: {str(e)}")
+        error = f"Error in Wyze function: {str(e)}"
+        logging.error(error)
+        errors.append(error)
         send_slack_message(f"Error in Wyze function: {str(e)}")
+
+    return deletions, updates, additions, errors
