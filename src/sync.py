@@ -71,6 +71,87 @@ def active_property_locks():
         logging.error(f"Error retrieving or processing entries: {str(e)}")
     
     return None
+    
+def get_smartthings(property,brand):
+    return [item for item in property["BrandSettings"] if item['brand'] == brand]
+
+# def process_reservations(delete_all_guest_codes=False):
+#     logging.info('Processing reservations.')
+
+#     try:
+#         logging.info(f"Server Time: {datetime.now()}")
+#         timezone = pytz.timezone(TIMEZONE)
+#         current_time = datetime.now(timezone)
+#         logging.info(f"current_time: {current_time}")
+
+#         hospitable_token = authenticate_hospitable()
+#         if not hospitable_token:
+#             send_slack_message("Unable to authenticate with Hospitable API.")
+#             return
+
+#         hospitable_properties = get_properties(hospitable_token)
+#         if not hospitable_properties:
+#             send_slack_message("Unable to fetch properties from Hospitable API.")
+#             return
+        
+#         wyze_token = get_wyze_token()
+#         if not wyze_token:
+#             send_slack_message("Unable to authenticate with Wyze API.")
+#             return
+
+#         wyze_client = Client(token=wyze_token)
+#         wyze_locks_client = wyze_client.locks
+
+#         table_properties = active_property_locks()
+        
+#         for property in table_properties:
+#             property_deletions = []
+#             property_updates = []
+#             property_additions = []
+#             property_errors = []
+#             property_name = property['PartitionKey']
+
+#             if property["RowKey"] == HOSPITABLE:
+#                 property_id = next((prop['id'] for prop in hospitable_properties if prop['name'] == property_name), None)
+#                 reservations = get_reservations(hospitable_token, property_id)
+#             else:
+#                 property_id = ""
+#                 reservations = None
+
+#             if not reservations and ALWAYS_SEND_SLACK_SUMMARY:
+#                 send_slack_message(f"No reservations for property {property_name}.")
+#                 continue
+
+#             if NON_PROD:
+#                 if property_name != TEST_PROPERTY_NAME:
+#                     send_slack_message(f"Skipping locks for property {property_name}.")
+#                     continue
+
+#             # Process the Locks property
+#             locks = json.loads(property['Locks'])
+
+#             for lock in locks:
+#                 logging.info(f"Processing lock: {lock['brand']} - {lock['name']}")
+
+#                 if lock['brand'] == WYZE:
+#                     deletions, updates, additions, errors = wyze_lock.sync(wyze_locks_client, lock['name'], property_name, reservations, current_time, timezone, delete_all_guest_codes)
+                    
+#                 elif lock['brand'] == SMARTTHINGS:
+#                     smarthings_settings = get_smartthings(property, SMARTTHINGS)
+#                     deletions, updates, additions, errors = smartthings_lock.sync(lock['name'], property_name, smarthings_settings["location"], reservations, current_time)
+                
+#                 property_deletions.extend(deletions)
+#                 property_updates.extend(updates)
+#                 property_additions.extend(additions)
+#                 property_errors.extend(errors)
+
+#             if ALWAYS_SEND_SLACK_SUMMARY or any([property_deletions, property_updates, property_additions, property_errors]):
+#                 send_summary_slack_message(property_name, property_deletions, property_updates, property_additions, property_errors)
+
+
+#     except Exception as e:
+#         logging.error(f"Error in function: {str(e)}")
+#         send_slack_message(f"Error in function: {str(e)}")
 
 def process_reservations(delete_all_guest_codes=False):
     logging.info('Processing reservations.')
@@ -102,10 +183,7 @@ def process_reservations(delete_all_guest_codes=False):
         table_properties = active_property_locks()
         
         for property in table_properties:
-            property_deletions = []
-            property_updates = []
-            property_additions = []
-            property_errors = []
+            property_deletions, property_updates, property_additions, property_errors = [], [], [], []
             property_name = property['PartitionKey']
 
             if property["RowKey"] == HOSPITABLE:
@@ -119,35 +197,38 @@ def process_reservations(delete_all_guest_codes=False):
                 send_slack_message(f"No reservations for property {property_name}.")
                 continue
 
-            if NON_PROD:
-                if property_name != TEST_PROPERTY_NAME:
-                    send_slack_message(f"Skipping locks for property {property_name}.")
-                    continue
+            if NON_PROD and property_name != TEST_PROPERTY_NAME:
+                send_slack_message(f"Skipping locks for property {property_name}.")
+                continue
 
-            # Process the Locks property
-            locks = json.loads(property['Locks'])
-
-            for lock in locks:
-                logging.info(f"Processing lock: {lock['brand']} - {lock['name']}")
-
-                if lock['brand'] == WYZE:
-                    deletions, updates, additions, errors = wyze_lock.sync(wyze_locks_client, lock['name'], property_name, reservations, current_time, timezone, delete_all_guest_codes)
-                    
-                elif lock['brand'] == SMARTTHINGS:
-                    deletions, updates, additions, errors = smartthings_lock.sync(lock['name'], property_name, property["Location"], reservations, current_time)
-                
-                property_deletions.extend(deletions)
-                property_updates.extend(updates)
-                property_additions.extend(additions)
-                property_errors.extend(errors)
+            process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors)
 
             if ALWAYS_SEND_SLACK_SUMMARY or any([property_deletions, property_updates, property_additions, property_errors]):
                 send_summary_slack_message(property_name, property_deletions, property_updates, property_additions, property_errors)
 
-
     except Exception as e:
         logging.error(f"Error in function: {str(e)}")
         send_slack_message(f"Error in function: {str(e)}")
+
+def process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors):
+    locks = json.loads(property['Locks'])
+    property_name = property['PartitionKey']
+    
+    for lock in locks:
+        logging.info(f"Processing lock: {lock['brand']} - {lock['name']}")
+
+        if lock['brand'] == WYZE:
+            deletions, updates, additions, errors = wyze_lock.sync(wyze_locks_client, lock['name'], property_name, reservations, current_time, timezone, delete_all_guest_codes)
+        
+        elif lock['brand'] == SMARTTHINGS:
+            smarthings_settings = get_smartthings(property, SMARTTHINGS)
+            deletions, updates, additions, errors = smartthings_lock.sync(lock['name'], property_name, smarthings_settings["location"], reservations, current_time)
+        
+        property_deletions.extend(deletions)
+        property_updates.extend(updates)
+        property_additions.extend(additions)
+        property_errors.extend(errors)
+
 
 if __name__ == "__main__" and LOCAL_DEVELOPMENT:
     process_reservations()
