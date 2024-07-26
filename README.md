@@ -105,7 +105,16 @@ Known Values
 
 Table Object in JSON
 ```json
-{ "PartitionKey": "Boston - Main St", "RowKey": "Hospitable", "Active": true, "Location": "Boston Main St", "Locks": [ { "brand": "wyze", "name": "Boston - Main St - FD" }, { "brand": "smartthings", "name": "Backdoor" } ] }
+{
+    "PartitionKey": "Boston - Main St",
+    "RowKey": "Hospitable",
+    "Active": true,
+    "BrandSettings": [ { "brand":"smartthings", "location":"Boston Main St" } ],
+    "Lights": {},
+    "Location": {"latitude":"","longitude":""},
+    "Locks": [ { "brand": "wyze", "name": "Boston - Main St - FD" }, { "brand": "smartthings", "name": "Backdoor" } ],
+    "Thermostats": {},
+}
 ```
 
 
