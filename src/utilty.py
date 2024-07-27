@@ -1,4 +1,6 @@
 import time
+import json
+import logging
 from datetime import datetime, timedelta
 import pytz
 
@@ -21,3 +23,16 @@ def parse_local_time(time_str, timezone):
     now = datetime.now()
     return local_timezone.localize(datetime(now.year, now.month, now.day, int(time_parts[0]), int(time_parts[1])))
 
+
+def validate_json(json_str):
+    try:
+        json_obj = json.loads(json_str)
+        return json_obj
+    except json.JSONDecodeError as e:
+        error = f"Invalid JSON: {e.msg} at line {e.lineno}, column {e.colno}"
+        logging.error(error)
+        raise ValueError(error)
+    except Exception as e:
+        error = f"An error occurred: {e}"
+        logging.error(error)
+        raise ValueError(error)

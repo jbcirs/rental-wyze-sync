@@ -17,6 +17,7 @@ from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
 from azure.data.tables import TableServiceClient
+from utilty import validate_json
 
 HOSPITABLE = "Hospitable"
 SMARTTHINGS = "smartthings"
@@ -41,10 +42,9 @@ else:
     # Fetch secrets from Key Vault
     STORAGE_CONNECTION_STRING = client.get_secret("STORAGE-CONNECTION-STRING").value
 
-def active_property_locks():
+def active_property(devices: List[Devices]):
     table_name = "properties"
     properties = []
-
 
     # Initialize the Table service client
     table_service_client = TableServiceClient.from_connection_string(conn_str=STORAGE_CONNECTION_STRING)
@@ -59,22 +59,21 @@ def active_property_locks():
         for entry in active_entries:
             logging.info(f"Processing entry with PartitionKey: {entry['PartitionKey']}, RowKey: {entry['RowKey']}")
             
-            # Check if the 'Locks' property exists and is not empty
-            if 'Locks' in entry and entry['Locks']:
-                try:
-                    properties.append(entry)
-                except json.JSONDecodeError as json_err:
-                    logging.error(f"JSON decoding error for entry {entry['RowKey']}: {str(json_err)}")
-                except Exception as e:
-                    logging.error(f"Error processing locks for entry {entry['RowKey']}: {str(e)}")
-            else:
-                logging.warning(f"No 'Locks' property found or 'Locks' property is empty for entry {entry['RowKey']}")
-        return properties
-    
+            for device in devices:
+                # Check if the device property exists and is not empty
+                if device.value in entry and entry[device.value]:
+                    try:
+                        properties.append(entry)
+                    except json.JSONDecodeError as json_err:
+                        logging.error(f"JSON decoding error for entry {entry['RowKey']}: {str(json_err)}")
+                    except Exception as e:
+                        logging.error(f"Error processing locks for entry {entry['RowKey']}: {str(e)}")
+                else:
+                    logging.warning(f"No '{device.value}' property found or '{device.value}' property is empty for entry {entry['RowKey']}")
     except Exception as e:
-        logging.error(f"Error retrieving or processing entries: {str(e)}")
-    
-    return None
+        logging.error(f"An error occurred while querying the table: {str(e)}")
+
+    return properties
     
 def get_settings(property, brand):
     brand_settings = json.loads(property["BrandSettings"])
@@ -110,7 +109,7 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
         wyze_client = Client(token=wyze_token)
         wyze_locks_client = wyze_client.locks
 
-        table_properties = active_property_locks()
+        table_properties = active_property(devices)
         
         for property in table_properties:
             property_deletions, property_updates, property_additions, property_errors = [], [], [], []
