@@ -32,6 +32,8 @@ def parse_time(time_str, timezone):
     return parsed_time
 
 def is_before_sunset(lat, lng, minutes, timezone):
+    if minutes is None:
+        return False, 0
     try:
         data = get_data(lat, lng, timezone)
 
@@ -42,18 +44,18 @@ def is_before_sunset(lat, lng, minutes, timezone):
         sunset_str = data['properties']['data']['sundata'][3]['time']  # Assuming 'Set' is the fourth entry in 'sundata'
         sunset_time_local = parse_time(sunset_str, timezone)
         current_time_local = datetime.now(pytz.timezone(timezone))
-        
-        if current_time_local < sunset_time_local - timedelta(minutes=minutes):
-            return True, max(0, (sunset_time_local - current_time_local).total_seconds() / 60)
+
+        if current_time_local >= sunset_time_local - timedelta(minutes=minutes):
+            return True, 0
         else:
-            next_sunrise_str = data['properties']['data']['sundata'][1]['time']  # Assuming 'Rise' is the second entry in 'sundata'
-            next_sunrise_time_local = parse_time(next_sunrise_str, timezone) + timedelta(days=1)
-            return current_time_local < next_sunrise_time_local, max(0, (sunset_time_local - current_time_local).total_seconds() / 60)
+            return False, 0
     except Exception as e:
         logging.error(f"Error in is_before_sunset: {e}")
         return False, 0
 
 def is_past_sunrise(lat, lng, minutes, timezone):
+    if minutes is None:
+        return False
     try:
         data = get_data(lat, lng, timezone)
 
@@ -66,9 +68,10 @@ def is_past_sunrise(lat, lng, minutes, timezone):
         current_time_local = datetime.now(pytz.timezone(timezone))
         time_after_sunrise = sunrise_time_local + timedelta(minutes=minutes)
 
-        before_sunset, _ = is_before_sunset(lat, lng, minutes, timezone)
-
-        return current_time_local >= time_after_sunrise and not before_sunset
+        if current_time_local >= time_after_sunrise:
+            return True
+        else:
+            return False
     except Exception as e:
         logging.error(f"Error in is_past_sunrise: {e}")
         return False
