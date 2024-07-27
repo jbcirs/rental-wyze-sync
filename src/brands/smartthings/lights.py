@@ -20,30 +20,33 @@ ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false')
 
 def switch_light(light_id,state,light_name,property_name,updates,errors):
     if switch(light_id, state):
-        logging.info(f"Switched light: {light_name} at {property_name}; ")
-        updates.append(f"{Device.LIGHT} - {property_name} - {light_name}")
+        light_status = 'on' if state else 'off'
+        logging.info(f"Switched light {light_status}: {light_name} at {property_name}; ")
+        updates.append(f"{Device.LIGHT.value} {light_status} - {property_name} - {light_name}")
     else:
-        errors.append(f"Switching {Device.LIGHT} for {light_name} at {property_name}")
+        errors.append(f"Switching {Device.LIGHT.value} for {light_name} at {property_name}")
     
     return updates, errors
 
 def sync(light, sunset, sunrise, property_name, location, reservations, current_time):
-    logging.info(f'Processing SmartThings {Device.Lights} reservations.')
+    logging.info(f'Processing SmartThings {Device.LIGHT.value} reservations.')
     updates = []
     errors = []
 
     try:
         light_name = light['name']
         location_id = find_location_by_name(location)
+
         if location_id is None:
             send_slack_message(f"Unable to fetch location ID for {light_name} at {property_name}.")
             return
-        
-        light_id = get_device_id_by_name(location_id,light_name)
-        if light_id is None:
-            send_slack_message(f"Unable to fetch {Device.Lights} for {light_name} at {property_name}.")
-            return
 
+        light_id = get_device_id_by_label(location_id,light_name)
+
+        if light_id is None:
+            send_slack_message(f"Unable to fetch {Device.LIGHT.value} for {light_name} at {property_name}.")
+            return
+        
         if light['reservations_only']:
             # Process reservations
             for reservation in reservations:
@@ -64,9 +67,9 @@ def sync(light, sunset, sunrise, property_name, location, reservations, current_
                 switch_light(light_id, False, light_name, property_name, updates, errors)
 
     except Exception as e:
-        error = f"Error in SmatThings {Device.LIGHT} function: {str(e)}"
+        error = f"Error in SmatThings {Device.LIGHT.value} function: {str(e)}"
         logging.error(error)
         errors.append(error)
-        send_slack_message(f"Error in SmatThings {Device.LIGHT} function: {str(e)}")
+        send_slack_message(f"Error in SmatThings {Device.LIGHT.value} function: {str(e)}")
 
     return updates, errors

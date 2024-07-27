@@ -3,12 +3,18 @@ import logging
 from datetime import datetime, timedelta
 import pytz
 
-def get_data(lat, lng):
-    url = "https://api.usno.navy.mil/rstt/oneday"
+def get_utc_offset(timezone):
+    local_timezone = pytz.timezone(timezone)
+    utc_offset = datetime.now(local_timezone).utcoffset()
+    return int(utc_offset.total_seconds() / 3600)
+
+def get_data(lat, lng, timezone):
+    utc_offset = get_utc_offset(timezone)
+    url = "https://aa.usno.navy.mil/api/rstt/oneday"
     params = {
         'date': datetime.now().strftime('%Y-%m-%d'),
         'coords': f'{lat},{lng}',
-        'tz': 'auto'
+        'tz': utc_offset
     }
     response = requests.get(url, params=params)
     data = response.json()
@@ -18,60 +24,48 @@ def get_data(lat, lng):
     
     return data
 
-def is_after_sunset(lat, lng, minutes, timezone):
-    data = get_data(lat, lng)
-
-    if not data:
-        logging.error("No data from USNO API")
-        return False
-
-    sunset_str = data['sundata'][-1]['time']  # Assuming the last entry in 'sundata' is the sunset
-    sunset_time_utc = datetime.strptime(sunset_str, '%I:%M %p').replace(
-        year=datetime.now().year,
-        month=datetime.now().month,
-        day=datetime.now().day
-    )
+def parse_time(time_str, timezone):
     local_timezone = pytz.timezone(timezone)
-    sunset_time_local = pytz.utc.localize(sunset_time_utc).astimezone(local_timezone)
+    time_parts = time_str.split(':')
+    now = datetime.now()
+    parsed_time = local_timezone.localize(datetime(now.year, now.month, now.day, int(time_parts[0]), int(time_parts[1])))
+    return parsed_time
 
-    current_time_local = datetime.now(local_timezone)
-    time_after_sunset = sunset_time_local + timedelta(minutes=minutes)
 
-    return sunset_time_local <= current_time_local <= time_after_sunset
+def is_after_sunset(lat, lng, minutes, timezone):
+    try:
+        data = get_data(lat, lng, timezone)
+
+        if not data:
+            logging.error("No data from USNO API")
+            return False
+
+        sunset_str = data['properties']['data']['sundata'][3]['time']  # Assuming 'Set' is the fourth entry in 'sundata'
+        sunset_time_local = parse_time(sunset_str, timezone)
+
+        current_time_local = datetime.now(pytz.timezone(timezone))
+        time_after_sunset = sunset_time_local + timedelta(minutes=minutes)
+
+        return sunset_time_local <= current_time_local <= time_after_sunset
+    except Exception as e:
+        logging.error(f"Error in is_after_sunset: {e}")
+        return False
 
 def is_past_sunrise(lat, lng, minutes, timezone):
-    data = get_data(lat, lng)
+    try:
+        data = get_data(lat, lng, timezone)
 
-    if not data:
-        logging.error("No data from USNO API")
+        if not data:
+            logging.error("No data from USNO API")
+            return False
+
+        sunrise_str = data['properties']['data']['sundata'][1]['time']  # Assuming 'Rise' is the second entry in 'sundata'
+        sunrise_time_local = parse_time(sunrise_str, timezone)
+
+        current_time_local = datetime.now(pytz.timezone(timezone))
+        time_after_sunrise = sunrise_time_local + timedelta(minutes=minutes)
+
+        return sunrise_time_local <= current_time_local <= time_after_sunrise
+    except Exception as e:
+        logging.error(f"Error in is_past_sunrise: {e}")
         return False
-
-    sunrise_str = data['sundata'][0]['time']  # Assuming the first entry in 'sundata' is the sunrise
-    sunrise_time_utc = datetime.strptime(sunrise_str, '%I:%M %p').replace(
-        year=datetime.now().year,
-        month=datetime.now().month,
-        day=datetime.now().day
-    )
-    local_timezone = pytz.timezone(timezone)
-    sunrise_time_local = pytz.utc.localize(sunrise_time_utc).astimezone(local_timezone)
-
-    current_time_local = datetime.now(local_timezone)
-    time_after_sunrise = sunrise_time_local + timedelta(minutes=minutes)
-
-    return sunrise_time_local <= current_time_local <= time_after_sunrise
-
-# Example usage
-# latitude = 32.7767  # Latitude for Dallas, TX
-# longitude = -96.7970  # Longitude for Dallas, TX
-# minutes_to_check = 30  # Check if the sun is going down or has risen within the next/past 30 minutes
-# timezone = 'America/Chicago'  # Local timezone
-
-# if is_sun_going_down(latitude, longitude, minutes_to_check, timezone):
-#     print("The sun is going down within the next 30 minutes.")
-# else:
-#     print("The sun is not going down within the next 30 minutes.")
-
-# if is_sun_risen(latitude, longitude, minutes_to_check, timezone):
-#     print("The sun has risen within the past 30 minutes.")
-# else:
-#     print("The sun has not risen within the past 30 minutes.")

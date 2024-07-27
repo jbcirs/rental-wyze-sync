@@ -19,7 +19,7 @@ TIMEZONE = os.environ['TIMEZONE']
 ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
 
 def sync(lock_name, property_name, location, reservations, current_time):
-    logging.info(f'Processing SmartThings {Device.LOCK} reservations.')
+    logging.info(f'Processing SmartThings {Device.LOCK.value} reservations.')
     deletions = []
     updates = []
     additions = []
@@ -27,6 +27,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
     active_guest_user_names = []
 
     try:
+        print("1")
         location_id = find_location_by_name(location)
         if location_id is None:
             send_slack_message(f"Unable to fetch location ID for {lock_name} at {property_name}.")
@@ -34,12 +35,12 @@ def sync(lock_name, property_name, location, reservations, current_time):
         
         locks_with_users = get_locks(location_id)
         if locks_with_users is None:
-            send_slack_message(f"Unable to fetch {Device.LOCK} with users for {lock_name} at {property_name}.")
+            send_slack_message(f"Unable to fetch {Device.LOCK.value} with users for {lock_name} at {property_name}.")
             return
         
         lock = find_lock_by_name(locks_with_users,lock_name)
         if lock is None:
-            send_slack_message(f"Unable to fetch {Device.LOCK} for {lock_name} at {property_name}.")
+            send_slack_message(f"Unable to fetch {Device.LOCK.value} for {lock_name} at {property_name}.")
             return
         
         # Process reservations
@@ -57,9 +58,9 @@ def sync(lock_name, property_name, location, reservations, current_time):
                 if not find_user_id_by_name(lock, label):
                     logging.info(f"ADD: {property_name}; label: {label}")
                     if add_user_code(lock, user_name, phone_last4):
-                        additions.append(f"{Device.LOCK} - {lock_name}: {label}")
+                        additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
                     else:
-                        errors.append(f"Adding {Device.LOCK} Code for {lock_name}: {label}")
+                        errors.append(f"Adding {Device.LOCK.value} Code for {lock_name}: {label}")
 
         # Delete old guest codes
         guest_user_names = find_all_guest_user_names(lock)
@@ -70,14 +71,14 @@ def sync(lock_name, property_name, location, reservations, current_time):
                 user_id = find_user_id_by_name(lock,user_name)
 
                 if delete_user_code(lock, user_id):
-                    deletions.append(f"{Device.LOCK} - {lock_name}: {user_name}")
+                    deletions.append(f"{Device.LOCK.value} - {lock_name}: {user_name}")
                 else:
-                    errors.append(f"Deleting {Device.LOCK} Code for {lock_name}: {user_name}")
+                    errors.append(f"Deleting {Device.LOCK.value} Code for {lock_name}: {user_name}")
 
     except Exception as e:
-        error = f"Error in SmatThings {Device.LOCK} function: {str(e)}"
+        error = f"Error in SmatThings {Device.LOCK.value} function: {str(e)}"
         logging.error(error)
         errors.append(error)
-        send_slack_message(f"Error in SmatThings {Device.LOCK} function: {str(e)}")
+        send_slack_message(f"Error in SmatThings {Device.LOCK.value} function: {str(e)}")
 
     return deletions, updates, additions, errors

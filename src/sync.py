@@ -15,6 +15,7 @@ from slack_notify import send_slack_message, send_summary_slack_message
 import brands.wyze.lock_sync as wyze_lock
 from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.lock_sync as smartthings_lock
+import brands.smartthings.lights as smartthings_lights
 from azure.data.tables import TableServiceClient
 
 HOSPITABLE = "Hospitable"
@@ -75,8 +76,12 @@ def active_property_locks():
     
     return None
     
-def get_smartthings(property,brand):
-    return [item for item in property["BrandSettings"] if item['brand'] == brand]
+def get_settings(property, brand):
+    brand_settings = json.loads(property["BrandSettings"])
+    for item in brand_settings:
+        if item['brand'] == brand:
+            return item
+    return None
 
 def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_guest_codes=False):
     logging.info('Processing reservations.')
@@ -123,7 +128,7 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
                 continue
 
             if NON_PROD and property_name != TEST_PROPERTY_NAME:
-                send_slack_message(f"Skipping locks for property {property_name}.")
+                send_slack_message(f"Skipping property {property_name}.")
                 continue
             
             if Devices.LOCKS in devices:
@@ -150,7 +155,7 @@ def process_property_locks(property, reservations, wyze_locks_client, current_ti
             deletions, updates, additions, errors = wyze_lock.sync(wyze_locks_client, lock['name'], property_name, reservations, current_time, timezone, delete_all_guest_codes)
         
         elif lock['brand'] == SMARTTHINGS:
-            smarthings_settings = get_smartthings(property, SMARTTHINGS)
+            smarthings_settings = get_settings(property, SMARTTHINGS)
             deletions, updates, additions, errors = smartthings_lock.sync(lock['name'], property_name, smarthings_settings["location"], reservations, current_time)
         
         property_deletions.extend(deletions)
@@ -160,9 +165,9 @@ def process_property_locks(property, reservations, wyze_locks_client, current_ti
 
 def process_property_lights(property, reservations, current_time, property_updates, property_errors):
     lights = json.loads(property['Lights'])
-    location = property['Location']
+    location =json.loads( property['Location'])
     property_name = property['PartitionKey']
-    
+
     for light in lights:
         logging.info(f"Processing lock: {light['brand']} - {light['name']}")
 
@@ -171,12 +176,12 @@ def process_property_lights(property, reservations, current_time, property_updat
         sunrise = is_past_sunrise(location['latitude'], location['longitude'], light['minutes_after_sunrise'], TIMEZONE)
 
         if light['brand'] == SMARTTHINGS:
-            smarthings_settings = get_smartthings(property, SMARTTHINGS)
-            updates, errors = smartthings_lock.sync(light, sunset, sunrise, property_name, smarthings_settings["location"], reservations, current_time)
+            smarthings_settings = get_settings(property, SMARTTHINGS)
+            updates, errors = smartthings_lights.sync(light, sunset, sunrise, property_name, smarthings_settings['location'], reservations, current_time)
         
         property_updates.extend(updates)
         property_errors.extend(errors)
 
 
 if __name__ == "__main__" and LOCAL_DEVELOPMENT:
-    process_reservations()
+    process_reservations([Devices.LIGHTS])
