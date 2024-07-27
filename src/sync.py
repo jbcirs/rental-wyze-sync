@@ -171,9 +171,15 @@ def process_property_lights(property, reservations, current_time, property_updat
     for light in lights:
         logging.info(f"Processing lock: {light['brand']} - {light['name']}")
 
-        #Get Sunset
-        sunset, minutes_until_sunset = is_before_sunset(location['latitude'], location['longitude'], light['minutes_before_sunset'], TIMEZONE)
-        sunrise = is_past_sunrise(location['latitude'], location['longitude'], light['minutes_after_sunrise'], TIMEZONE)
+        if light['minutes_before_sunset'] is None:
+            sunset = False
+        else:
+            sunset, minutes_until_sunset = is_before_sunset(location['latitude'], location['longitude'], light['minutes_before_sunset'], TIMEZONE)
+        
+        if light['minutes_after_sunrise'] is None:
+            sunrise = False
+        else:
+            sunrise = is_past_sunrise(location['latitude'], location['longitude'], light['minutes_after_sunrise'], TIMEZONE)
 
         if light['brand'] == SMARTTHINGS:
             smarthings_settings = get_settings(property, SMARTTHINGS)
