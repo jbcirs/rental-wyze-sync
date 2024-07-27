@@ -54,11 +54,18 @@ def sync(light, sunset, sunrise, property_name, location, reservations, current_
                 checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS, TIMEZONE)
 
                 if checkin_time <= current_time < checkout_time:
+                    print(f"1")
+                    print(f"sunset: {sunset}")
+                    print(f"sunrise: {sunrise}")
                     if (light['start_time'] is not None and light['start_time'] >= current_time) or sunset:
+                        print(f"On")
                         switch_light(light_id, True, light_name, property_name, updates, errors)
                     elif (light['stop_time'] is not None and light['stop_time'] >= current_time) or sunrise:
+                        print(f"off")
                         switch_light(light_id, False, light_name, property_name, updates, errors)
+                    break
                 else:
+                    print(f"2 - Off")
                     switch_light(light_id, False, light_name, property_name, updates, errors)
         else:
             if (light['start_time'] is not None and light['start_time'] >= current_time) or sunset:

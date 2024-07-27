@@ -4,7 +4,7 @@ import time
 import pytz
 import json
 from typing import List
-from usno import is_after_sunset, is_past_sunrise
+from usno import is_before_sunset, is_past_sunrise
 from devices import Devices
 from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
@@ -172,7 +172,7 @@ def process_property_lights(property, reservations, current_time, property_updat
         logging.info(f"Processing lock: {light['brand']} - {light['name']}")
 
         #Get Sunset
-        sunset = is_after_sunset(location['latitude'], location['longitude'], light['minutes_before_sunset'], TIMEZONE)
+        sunset, minutes_until_sunset = is_before_sunset(location['latitude'], location['longitude'], light['minutes_before_sunset'], TIMEZONE)
         sunrise = is_past_sunrise(location['latitude'], location['longitude'], light['minutes_after_sunrise'], TIMEZONE)
 
         if light['brand'] == SMARTTHINGS:
