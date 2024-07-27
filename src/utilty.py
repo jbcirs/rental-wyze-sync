@@ -14,3 +14,10 @@ def subtract_string_lists(list1, list2):
     set2 = set(list2)
     result = list(set1 - set2)
     return result
+
+def parse_local_time(time_str, timezone):
+    local_timezone = pytz.timezone(timezone)
+    time_parts = time_str.split(':')
+    now = datetime.now()
+    return local_timezone.localize(datetime(now.year, now.month, now.day, int(time_parts[0]), int(time_parts[1])))
+
