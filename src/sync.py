@@ -12,9 +12,9 @@ from azure.keyvault.secrets import SecretClient
 from wyze_sdk import Client
 from hospitable import authenticate_hospitable, get_properties, get_reservations
 from slack_notify import send_slack_message, send_summary_slack_message
-import brands.wyze.lock_sync as wyze_lock
+import brands.wyze.locks as wyze_lock
 from brands.wyze.wyze import get_wyze_token
-import brands.smartthings.lock_sync as smartthings_lock
+import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
 from azure.data.tables import TableServiceClient
 
