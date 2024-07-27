@@ -93,10 +93,10 @@ Each lock will need to be added to the Azure Storage Table called `properties`.
 - PartitionKey: PMS property name
 - RowKey: PMS System
 - BrandSettings: Is a list of all settings need for a bran to run
-- Location: Will be gps coordinates (future)
+- Location: Gps coordinates need for sunset and sunrise times
 - Active: `true` or `false` flag
 - Locks: Is a list of locks by brand and lock name
-- Lights: Coming soon
+- Lights: A list of smarthings lights. You can set to start with sunrise/sunset and/or set a time. Can also be set to only during reservations.
 - Thermostats: Coming soon
 
 Example:
@@ -114,7 +114,7 @@ Table Object in JSON
     "Active": true,
     "BrandSettings": [ { "brand":"smartthings", "location":"Boston Main St" } ],
     "Lights": [{"brand": "smartthings", "name": "String Lights", "reservations_only": true, "minutes_before_sunset": 30, "minutes_after_sunrise": 30, "start_time":  null, "stop_time": "23:00"}],
-    "Location": {"latitude":"","longitude":""},
+    "Location": {"latitude":"42.3554334","longitude":"-71.060511"},
     "Locks": [ { "brand": "wyze", "name": "Boston - Main St - FD" }, { "brand": "smartthings", "name": "Backdoor" } ],
     "Thermostats": {},
 }
