@@ -36,7 +36,8 @@ def get_new_token():
     if response.status_code == 200 and 'token' in response.json().get('data', {}):
         token = response.json()['data']['token']
         try:
-            client.set_secret("HOSPITABLE-TOKEN", token)
+            if not LOCAL_DEVELOPMENT:
+                client.set_secret("HOSPITABLE-TOKEN", token)
         except Exception as e:
             logging.error(f"Error in update Hospitable token: {str(e)}")
         return token

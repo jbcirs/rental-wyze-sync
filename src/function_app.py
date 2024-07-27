@@ -1,6 +1,7 @@
 import logging
 import os
 import json
+from devices import Devices
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
@@ -27,19 +28,19 @@ else:
     SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
 
 if not NON_PROD:
-    @app.schedule(schedule="0 0 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
+    @app.schedule(schedule="0 */30 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
     def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
         logging.info('Python timer trigger function executed at %s', mytimer)
 
         try:
             from sync import process_reservations
-            process_reservations()
+            process_reservations([Devices.LOCKS,Devices.LIGHTS])
             logging.info('Run process_reservations()')
         except Exception as e:
             logging.error(f"Error executing function: {str(e)}")
 
-@app.function_name(name="Sync")
-@app.route(route="trigger_sync", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+@app.function_name(name="Sync_Locks")
+@app.route(route="trigger_sync_locks", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
 def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
@@ -58,7 +59,20 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
 
     try:
         from sync import process_reservations
-        process_reservations(delete_all_guest_codes)
+        process_reservations([Devices.LOCKS], delete_all_guest_codes)
+        return func.HttpResponse("Function executed successfully.", status_code=200)
+    except Exception as e:
+        logging.error(f"Error executing function: {str(e)}")
+        return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+    
+@app.function_name(name="Sync_Lights")
+@app.route(route="trigger_sync_lights", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('HTTP trigger function processed a request.')
+
+    try:
+        from sync import process_reservations
+        process_reservations([Devices.LIGHTS])
         return func.HttpResponse("Function executed successfully.", status_code=200)
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
