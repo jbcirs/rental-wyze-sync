@@ -45,6 +45,8 @@ def is_before_sunset(lat, lng, minutes, timezone):
         sunset_time_local = parse_time(sunset_str, timezone)
         current_time_local = datetime.now(pytz.timezone(timezone))
 
+        logging.info(f"{current_time_local} >= {sunset_time_local} - {timedelta(minutes=minutes)}")
+
         if current_time_local >= sunset_time_local - timedelta(minutes=minutes):
             return True, 0
         else:
@@ -67,6 +69,8 @@ def is_past_sunrise(lat, lng, minutes, timezone):
         sunrise_time_local = parse_time(sunrise_str, timezone)
         current_time_local = datetime.now(pytz.timezone(timezone))
         time_after_sunrise = sunrise_time_local + timedelta(minutes=minutes)
+
+        logging.info(f"{current_time_local} >= {time_after_sunrise}")
 
         if current_time_local >= time_after_sunrise:
             return True
