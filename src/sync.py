@@ -16,6 +16,7 @@ import brands.wyze.locks as wyze_lock
 from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
+import brands.smartthings.thermostats as smartthings_thermostats
 from azure.data.tables import TableServiceClient
 from utilty import validate_json
 
@@ -136,6 +137,9 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
             if Devices.LIGHTS in devices:
                 process_property_lights(property, reservations, current_time, property_updates, property_errors)
 
+            if Devices.THERMOSTATS in devices:
+                process_property_thermostats(property, reservations, current_time, property_updates, property_errors)
+
             if ALWAYS_SEND_SLACK_SUMMARY or any([property_deletions, property_updates, property_additions, property_errors]):
                 send_summary_slack_message(property_name, property_deletions, property_updates, property_additions, property_errors)
 
@@ -168,7 +172,7 @@ def process_property_lights(property, reservations, current_time, property_updat
     property_name = property['PartitionKey']
 
     for light in lights:
-        logging.info(f"Processing lock: {light['brand']} - {light['name']}")
+        logging.info(f"Processing light: {light['brand']} - {light['name']}")
 
         if light['minutes_before_sunset'] is None:
             sunset = False
@@ -183,6 +187,21 @@ def process_property_lights(property, reservations, current_time, property_updat
         if light['brand'] == SMARTTHINGS:
             smarthings_settings = get_settings(property, SMARTTHINGS)
             updates, errors = smartthings_lights.sync(light, sunset, sunrise, property_name, smarthings_settings['location'], reservations, current_time)
+        
+        property_updates.extend(updates)
+        property_errors.extend(errors)
+
+def process_property_thermostats(property, reservations, current_time, property_updates, property_errors):
+    thermostats = json.loads(property['Thermostats'])
+    location =json.loads( property['Location'])
+    property_name = property['PartitionKey']
+
+    for thermostat in thermostats:
+        logging.info(f"Processing thermostat: {thermostat['brand']} - {thermostat['name']}")
+
+        if thermostat['brand'] == SMARTTHINGS:
+            smarthings_settings = get_settings(property, SMARTTHINGS)
+            updates, errors = smartthings_thermostats.sync(light, sunset, sunrise, property_name, smarthings_settings['location'], reservations, current_time)
         
         property_updates.extend(updates)
         property_errors.extend(errors)
