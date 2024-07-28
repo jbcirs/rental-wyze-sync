@@ -4,7 +4,7 @@ import time
 import pytz
 import json
 from typing import List
-from usno import is_before_sunset, is_past_sunrise
+from usno import is_sunset, is_sunrise, set_offset_minutes
 from devices import Devices
 from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
@@ -173,16 +173,19 @@ def process_property_lights(property, reservations, current_time, property_updat
 
     for light in lights:
         logging.info(f"Processing light: {light['brand']} - {light['name']}")
+        
+        if light['minutes_before_sunset'] is None and  light['minutes_after_sunrise'] is None:
+            set_offset_minutes(light['minutes_before_sunset'],light['minutes_after_sunrise'])
 
         if light['minutes_before_sunset'] is None:
             sunset = False
         else:
-            sunset, minutes_until_sunset = is_before_sunset(location['latitude'], location['longitude'], light['minutes_before_sunset'], TIMEZONE)
+            sunset = is_sunset(location['latitude'], location['longitude'], light['minutes_before_sunset'], current_time)
         
         if light['minutes_after_sunrise'] is None:
             sunrise = False
         else:
-            sunrise = is_past_sunrise(location['latitude'], location['longitude'], light['minutes_after_sunrise'], TIMEZONE)
+            sunrise = is_sunrise(location['latitude'], location['longitude'], light['minutes_after_sunrise'], current_time)
 
         if light['brand'] == SMARTTHINGS:
             smarthings_settings = get_settings(property, SMARTTHINGS)
@@ -197,11 +200,11 @@ def process_property_thermostats(property, reservations, current_time, property_
     property_name = property['PartitionKey']
 
     for thermostat in thermostats:
-        logging.info(f"Processing thermostat: {thermostat['brand']} - {thermostat['name']}")
+        logging.info(f"Processing thermostat: {thermostat['brand']} - {thermostat['manufacture']} - {thermostat['name']}")
 
         if thermostat['brand'] == SMARTTHINGS:
             smarthings_settings = get_settings(property, SMARTTHINGS)
-            updates, errors = smartthings_thermostats.sync(light, sunset, sunrise, property_name, smarthings_settings['location'], reservations, current_time)
+            updates, errors = smartthings_thermostats.sync(thermostat, property_name, smarthings_settings['location'], reservations, current_time)
         
         property_updates.extend(updates)
         property_errors.extend(errors)

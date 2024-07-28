@@ -65,6 +65,7 @@ def sync(light, sunset, sunrise, property_name, location, reservations, current_
     try:
         logging.info(f"sunset: {sunset}")
         logging.info(f"sunrise: {sunrise}")
+        
         light_name = light['name']
         location_id = find_location_by_name(location)
 
