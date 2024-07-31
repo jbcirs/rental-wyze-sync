@@ -19,25 +19,13 @@ TIMEZONE = os.environ['TIMEZONE']
 ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
 
 
-def get_switch_value(data):
-    try:
-        return data["components"]["main"]["switch"]["switch"]["value"]
-    except KeyError:
-        return None
-
 def switch_light(light_id,state,light_name,property_name,updates,errors):
-    light_status = 'on' if state else 'off'
-    light = get_device_status(light_id)
-    current_status = get_switch_value(light)
-
-    if current_status is None or current_status != light_status:
-        if switch(light_id, state):
-            logging.info(f"Switched {Device.LIGHT.value} {light_status}: {light_name} at {property_name}")
-            updates.append(f"{Device.LIGHT.value} {light_status} - {property_name} - {light_name}")
-        else:
-            errors.append(f"Switching {Device.LIGHT.value} for {light_name} at {property_name}")
+    if switch(light_id, state):
+        light_status = 'on' if state else 'off'
+        logging.info(f"Switched light {light_status}: {light_name} at {property_name}; ")
+        updates.append(f"{Device.LIGHT.value} {light_status} - {property_name} - {light_name}")
     else:
-        logging.info(f"Switch {Device.LIGHT.value} already {light_status}: {light_name} at {property_name}, no change required")
+        errors.append(f"Switching {Device.LIGHT.value} for {light_name} at {property_name}")
     
     return updates, errors
 
@@ -75,9 +63,6 @@ def sync(light, sunset, sunrise, property_name, location, reservations, current_
     light_state = False
 
     try:
-        logging.info(f"sunset: {sunset}")
-        logging.info(f"sunrise: {sunrise}")
-        
         light_name = light['name']
         location_id = find_location_by_name(location)
 

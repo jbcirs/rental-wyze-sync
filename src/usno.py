@@ -1,15 +1,26 @@
+import os
 import requests
 import logging
 from datetime import datetime, timedelta
 import pytz
 
-def get_utc_offset(timezone):
-    local_timezone = pytz.timezone(timezone)
+MINUTES_OFFSET_SUNSET = 0
+MINUTES_OFFSET_SUNRISE = 0
+TIMEZONE = os.environ['TIMEZONE']
+
+def set_offset_minutes(sunset_minutes,sunrise_minutes):
+    global MINUTES_OFFSET_SUNSET
+    global MINUTES_OFFSET_SUNRISE
+    MINUTES_OFFSET_SUNSET = sunset_minutes
+    MINUTES_OFFSET_SUNRISE = sunrise_minutes
+
+def get_utc_offset():
+    local_timezone = pytz.timezone(TIMEZONE)
     utc_offset = datetime.now(local_timezone).utcoffset()
     return int(utc_offset.total_seconds() / 3600)
 
-def get_data(lat, lng, timezone):
-    utc_offset = get_utc_offset(timezone)
+def get_data(lat, lng):
+    utc_offset = get_utc_offset(TIMEZONE)
     url = "https://aa.usno.navy.mil/api/rstt/oneday"
     params = {
         'date': datetime.now().strftime('%Y-%m-%d'),
@@ -24,54 +35,58 @@ def get_data(lat, lng, timezone):
     
     return data
 
-def parse_time(time_str, timezone):
-    local_timezone = pytz.timezone(timezone)
+def parse_time(time_str):
+    local_timezone = pytz.timezone(TIMEZONE)
     time_parts = time_str.split(':')
     now = datetime.now()
     parsed_time = local_timezone.localize(datetime(now.year, now.month, now.day, int(time_parts[0]), int(time_parts[1])))
     return parsed_time
 
-def is_before_sunset(lat, lng, minutes, timezone):
-    if minutes is None:
-        return False, 0
+def sunset(data):
+    sunset_str = data['properties']['data']['sundata'][3]['time']
+    sunset = parse_time(sunset_str, TIMEZONE)
+    sunset = (sunset + timedelta(minutes=MINUTES_OFFSET_SUNSET)).time()
+    return sunset
+
+def sunrise(data):
+    sunrise_str =  data['properties']['data']['sundata'][1]['time']
+    sunrise = parse_time(sunrise_str, TIMEZONE)
+    sunrise = (sunrise + timedelta(minutes=MINUTES_OFFSET_SUNRISE)).time()
+    return sunrise
+
+def is_sunset(lat, lng, minutes, current_time_local):
     try:
-        data = get_data(lat, lng, timezone)
+        data = get_data(lat, lng)
 
         if not data:
             logging.error("No data from USNO API")
-            return False, 0
+            return False
 
-        sunset_str = data['properties']['data']['sundata'][3]['time']  # Assuming 'Set' is the fourth entry in 'sundata'
-        sunset_time_local = parse_time(sunset_str, timezone)
-        current_time_local = datetime.now(pytz.timezone(timezone))
+        sunset_time = sunset(data)
+        sunrise_time = sunrise(data)
 
-        if current_time_local >= sunset_time_local - timedelta(minutes=minutes):
-            return True, 0
-        else:
-            return False, 0
+        if current_time_local >= sunset_time or current_time_local < sunrise_time:
+            return True
+        return False
+
     except Exception as e:
         logging.error(f"Error in is_before_sunset: {e}")
-        return False, 0
-
-def is_past_sunrise(lat, lng, minutes, timezone):
-    if minutes is None:
         return False
+
+def is_sunrise(lat, lng, minutes, current_time_local):
     try:
-        data = get_data(lat, lng, timezone)
+        data = get_data(lat, lng)
 
         if not data:
             logging.error("No data from USNO API")
             return False
 
-        sunrise_str = data['properties']['data']['sundata'][1]['time']  # Assuming 'Rise' is the second entry in 'sundata'
-        sunrise_time_local = parse_time(sunrise_str, timezone)
-        current_time_local = datetime.now(pytz.timezone(timezone))
-        time_after_sunrise = sunrise_time_local + timedelta(minutes=minutes)
+        sunset_time = sunset(data)
+        sunrise_time = sunrise(data)
 
-        if current_time_local >= time_after_sunrise:
+        if current_time_local >= sunrise_time and current_time_local < sunset_time:
             return True
-        else:
-            return False
+        return False
     except Exception as e:
         logging.error(f"Error in is_past_sunrise: {e}")
         return False

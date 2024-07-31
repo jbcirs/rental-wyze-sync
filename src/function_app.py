@@ -34,7 +34,7 @@ if not NON_PROD:
 
         try:
             from sync import process_reservations
-            process_reservations([Devices.LOCKS,Devices.LIGHTS])
+            process_reservations([Devices.LOCKS,Devices.LIGHTS,Devices.THERMOSTATS])
             logging.info('Run process_reservations()')
         except Exception as e:
             logging.error(f"Error executing function: {str(e)}")
@@ -73,6 +73,19 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     try:
         from sync import process_reservations
         process_reservations([Devices.LIGHTS])
+        return func.HttpResponse("Function executed successfully.", status_code=200)
+    except Exception as e:
+        logging.error(f"Error executing function: {str(e)}")
+        return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+    
+@app.function_name(name="Sync_Thermostats")
+@app.route(route="trigger_sync_thermostats", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('HTTP trigger function processed a request.')
+
+    try:
+        from sync import process_reservations
+        process_reservations([Devices.THERMOSTATS])
         return func.HttpResponse("Function executed successfully.", status_code=200)
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")

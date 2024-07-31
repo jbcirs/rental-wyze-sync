@@ -113,3 +113,8 @@ variable "smartthings_token" {
   description    = "SmartThings token"
   type           = string
 }
+
+variable "openweathermap_key" {
+  description    = "OpenWeather api key"
+  type           = string
+}
