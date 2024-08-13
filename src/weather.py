@@ -16,17 +16,14 @@ else:
     # Fetch secrets from Key Vault
     OPENWEATHERMAP_KEY = client.get_secret("OPENWEATHERMAP-KEY").value
 
-# Function to get the current outside temperature by latitude and longitude
-def get_current_temperature_by_lat_long(lat, lon):
-    url = f'http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHERMAP_KEY}&units=metric'
+def get_weather_by_lat_long(lat, lon):
+    url = f'http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHERMAP_KEY}&units=imperial'
     response = requests.get(url)
     data = response.json()
-    current_temp = data['main']['temp']
-    return current_temp
+    return data
 
-# Function to get the current outside temperature by ZIP code
 def get_current_temperature_by_zip(zip_code, country_code='US'):
-    url = f'http://api.openweathermap.org/data/2.5/weather?zip={zip_code},{country_code}&appid={OPENWEATHERMAP_KEY}&units=metric'
+    url = f'http://api.openweathermap.org/data/2.5/weather?zip={zip_code},{country_code}&appid={OPENWEATHERMAP_KEY}&units=imperial'
     response = requests.get(url)
     data = response.json()
     current_temp = data['main']['temp']

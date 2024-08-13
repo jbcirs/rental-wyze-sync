@@ -36,3 +36,17 @@ def validate_json(json_str):
         error = f"An error occurred: {e}"
         logging.error(error)
         raise ValueError(error)
+    
+def filter_by_key(device, sub_key, key_value):
+    filtered_data = None
+    filtered_items = [
+        item for item in device.get(sub_key, [])
+        if item.get("when") == key_value
+    ]
+
+    if filtered_items:
+        new_device = device.copy()
+        new_device[sub_key] = filtered_items
+        filtered_data = new_device
+    
+    return filtered_data

@@ -106,6 +106,65 @@ def switch(device_id, state=True):
     response.raise_for_status()
     return True
 
+def send_command(url, command):
+    payload = {"commands": [command]}
+
+    response = requests.post(url, headers=HEADERS, json=payload)
+
+    if response.status_code != 200:
+        logging.info(f"Failed to execute command '{command['command']}'. Status code: {response.status_code}")
+        logging.info(f"Response: {response.text}")
+        return False
+    
+    logging.info(f"Command '{command['command']}' executed successfully.")
+
+    return True
+
+def set_thermostat(device_id, device_name, mode, cool_temp=None, heat_temp=None, fan_mode="auto"):
+    url = f"{BASE_URL}/devices/{device_id}/commands"
+    commands = []
+
+    if mode in ["cool", "heat", "auto", "off"]:
+        commands.append({
+            "component": "main",
+            "capability": "thermostatMode",
+            "command": "setThermostatMode",
+            "arguments": [mode]
+        })
+
+    if cool_temp is not None and mode == "cool":
+        commands.append({
+            "component": "main",
+            "capability": "thermostatCoolingSetpoint",
+            "command": "setCoolingSetpoint",
+            "arguments": [cool_temp]
+        })
+
+    if heat_temp is not None and mode == "heat":
+        commands.append({
+            "component": "main",
+            "capability": "thermostatHeatingSetpoint",
+            "command": "setHeatingSetpoint",
+            "arguments": [heat_temp]
+        })
+
+    if fan_mode in ["auto", "on"]:
+        commands.append({
+            "component": "main",
+            "capability": "thermostatFanMode",
+            "command": "setThermostatFanMode",
+            "arguments": [fan_mode]
+        })
+
+    # Send the commands one by one with a delay
+    for command in commands:
+        success = send_command(url, command)
+        if not success:
+            return False
+        time.sleep(1)
+    
+    return True
+
 
 def filter_locks(devices):
     locks = [device for device in devices if any(capability['id'] == 'lockCodes' for capability in device['components'][0]['capabilities'])]

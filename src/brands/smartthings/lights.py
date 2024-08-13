@@ -99,8 +99,8 @@ def sync(light, sunset, sunrise, property_name, location, reservations, current_
                 if checkin_time <= current_time < checkout_time:
                     light_state = determine_light_state(light, current_time, sunset, sunrise)
                     break
-            else:
-                light_state = False
+                else:
+                    light_state = False
         else:
             light_state = determine_light_state(light, current_time, sunset, sunrise)
 
