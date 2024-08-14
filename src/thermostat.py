@@ -20,9 +20,9 @@ def get_comfortable_temperatures(mode, reservation=False, temperatures=None):
         }
     else:
         default_temperatures = {
-            'heat': {'cool_temp': 85, 'heat_temp': 60},
-            'cool': {'cool_temp': 85, 'heat_temp': 60},
-            'auto': {'cool_temp': 85, 'heat_temp': 60}
+            'heat': {'cool_temp': 85, 'heat_temp': 50},
+            'cool': {'cool_temp': 85, 'heat_temp': 50},
+            'auto': {'cool_temp': 85, 'heat_temp': 50}
         }
 
     if temperatures:

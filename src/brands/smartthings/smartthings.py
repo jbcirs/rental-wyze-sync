@@ -132,7 +132,7 @@ def set_thermostat(device_id, device_name, mode, cool_temp=None, heat_temp=None,
             "arguments": [mode]
         })
 
-    if cool_temp is not None and mode == "cool":
+    if cool_temp is not None:
         commands.append({
             "component": "main",
             "capability": "thermostatCoolingSetpoint",
@@ -140,7 +140,7 @@ def set_thermostat(device_id, device_name, mode, cool_temp=None, heat_temp=None,
             "arguments": [cool_temp]
         })
 
-    if heat_temp is not None and mode == "heat":
+    if heat_temp is not None:
         commands.append({
             "component": "main",
             "capability": "thermostatHeatingSetpoint",

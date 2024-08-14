@@ -131,8 +131,8 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
                 send_slack_message(f"Skipping property {property_name}.")
                 continue
 
-            # if Devices.LIGHTS in devices:
-            #     process_property_lights(property, reservations, current_time, property_updates, property_errors)
+            if Devices.LIGHTS in devices:
+                process_property_lights(property, reservations, current_time, property_updates, property_errors)
 
             if Devices.THERMOSTATS in devices:
                 process_property_thermostats(property, reservations, current_time, property_updates, property_errors)
@@ -143,11 +143,8 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
 
             
             
-            # if Devices.LOCKS in devices:
-            #     process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors)
-            
-            
-            print(f"property_updates: {property_updates}")
+            if Devices.LOCKS in devices:
+                process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors)
 
             if ALWAYS_SEND_SLACK_SUMMARY or any([property_deletions, property_updates, property_additions, property_errors]):
                 send_summary_slack_message(property_name, property_deletions, property_updates, property_additions, property_errors)
