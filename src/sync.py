@@ -19,7 +19,7 @@ import brands.smartthings.lights as smartthings_lights
 import brands.smartthings.thermostats as smartthings_thermostats
 from thermostat import get_thermostat_settings
 from azure.data.tables import TableServiceClient
-from utilty import format_datetime, filter_by_key
+from utilty import format_datetime, filter_by_key, is_valid_hour
 from when import When
 
 HOSPITABLE = "Hospitable"
@@ -221,6 +221,13 @@ def process_property_thermostats(property, reservations, current_time, property_
                     filtered_thermostat = filter_by_key(thermostat, "temperatures", When.NON_RESERVATIONS.value)
         else:
             filtered_thermostat = filter_by_key(thermostat, "temperatures", When.NON_RESERVATIONS.value)
+
+        logging.info(f"filtered_thermostat by When: {filtered_thermostat}")
+
+        if not is_valid_hour(filtered_thermostat, current_time):
+            logging.info(f"Not a valid hour for {thermostat['name']} at {property_name}")
+            continue
+        
 
         mode, cool_temp, heat_temp = get_thermostat_settings(location, reservation=bool(reservations), mode=None, temperatures=filtered_thermostat['temperatures'])
 

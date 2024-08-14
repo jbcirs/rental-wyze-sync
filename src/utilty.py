@@ -50,3 +50,15 @@ def filter_by_key(device, sub_key, key_value):
         filtered_data = new_device
     
     return filtered_data
+
+def is_valid_hour(item, current_time):
+    current_hour = current_time.hour
+    logging.info(f"current_hour: {current_hour}")
+    
+    rest_hours = [datetime.strptime(time, "%H:%M").hour for time in item.get("rest_times", [])]
+    logging.info(f"rest_hours: {rest_hours}")
+    
+    if current_hour in rest_hours:
+        return True
+    
+    return False

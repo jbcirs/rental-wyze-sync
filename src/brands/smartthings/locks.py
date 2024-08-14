@@ -27,7 +27,6 @@ def sync(lock_name, property_name, location, reservations, current_time):
     active_guest_user_names = []
 
     try:
-        print("1")
         location_id = find_location_by_name(location)
         if location_id is None:
             send_slack_message(f"Unable to fetch location ID for {lock_name} at {property_name}.")
