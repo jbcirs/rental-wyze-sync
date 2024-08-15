@@ -36,3 +36,29 @@ def validate_json(json_str):
         error = f"An error occurred: {e}"
         logging.error(error)
         raise ValueError(error)
+    
+def filter_by_key(device, sub_key, key_value):
+    filtered_data = None
+    filtered_items = [
+        item for item in device.get(sub_key, [])
+        if item.get("when") == key_value
+    ]
+
+    if filtered_items:
+        new_device = device.copy()
+        new_device[sub_key] = filtered_items
+        filtered_data = new_device
+    
+    return filtered_data
+
+def is_valid_hour(item, current_time):
+    current_hour = current_time.hour
+    logging.info(f"current_hour: {current_hour}")
+    
+    rest_hours = [datetime.strptime(time, "%H:%M").hour for time in item.get("rest_times", [])]
+    logging.info(f"rest_hours: {rest_hours}")
+    
+    if current_hour in rest_hours:
+        return True
+    
+    return False

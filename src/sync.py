@@ -4,7 +4,7 @@ import time
 import pytz
 import json
 from typing import List
-from usno import is_before_sunset, is_past_sunrise
+from usno import is_sunset, is_sunrise, set_offset_minutes
 from devices import Devices
 from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
@@ -16,8 +16,11 @@ import brands.wyze.locks as wyze_lock
 from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
+import brands.smartthings.thermostats as smartthings_thermostats
+from thermostat import get_thermostat_settings
 from azure.data.tables import TableServiceClient
-from utilty import validate_json
+from utilty import format_datetime, filter_by_key, is_valid_hour
+from when import When
 
 HOSPITABLE = "Hospitable"
 SMARTTHINGS = "smartthings"
@@ -25,6 +28,8 @@ WYZE = "wyze"
 
 # Configuration
 VAULT_URL = os.environ["VAULT_URL"]
+CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
+CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_OUT_OFFSET_HOURS'])
 NON_PROD = os.environ.get('NON_PROD', 'false').lower() == 'true'
 TEST_PROPERTY_NAME = os.environ['TEST_PROPERTY_NAME']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
@@ -122,19 +127,24 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
                 property_id = ""
                 reservations = None
 
-            if not reservations and ALWAYS_SEND_SLACK_SUMMARY:
-                send_slack_message(f"No reservations for property {property_name}.")
-                continue
-
             if NON_PROD and property_name != TEST_PROPERTY_NAME:
                 send_slack_message(f"Skipping property {property_name}.")
                 continue
+
+            if Devices.LIGHTS in devices:
+                process_property_lights(property, reservations, current_time, property_updates, property_errors)
+
+            if Devices.THERMOSTATS in devices:
+                process_property_thermostats(property, reservations, current_time, property_updates, property_errors)
+
+            if not reservations and ALWAYS_SEND_SLACK_SUMMARY:
+                send_slack_message(f"No reservations for property {property_name}.")
+                #continue
+
+            
             
             if Devices.LOCKS in devices:
                 process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors)
-            
-            if Devices.LIGHTS in devices:
-                process_property_lights(property, reservations, current_time, property_updates, property_errors)
 
             if ALWAYS_SEND_SLACK_SUMMARY or any([property_deletions, property_updates, property_additions, property_errors]):
                 send_summary_slack_message(property_name, property_deletions, property_updates, property_additions, property_errors)
@@ -168,17 +178,20 @@ def process_property_lights(property, reservations, current_time, property_updat
     property_name = property['PartitionKey']
 
     for light in lights:
-        logging.info(f"Processing lock: {light['brand']} - {light['name']}")
+        logging.info(f"Processing light: {light['brand']} - {light['name']}")
+        
+        if light['minutes_before_sunset'] is None and  light['minutes_after_sunrise'] is None:
+            set_offset_minutes(light['minutes_before_sunset'],light['minutes_after_sunrise'])
 
         if light['minutes_before_sunset'] is None:
             sunset = False
         else:
-            sunset, minutes_until_sunset = is_before_sunset(location['latitude'], location['longitude'], light['minutes_before_sunset'], TIMEZONE)
+            sunset = is_sunset(location['latitude'], location['longitude'], light['minutes_before_sunset'], current_time)
         
         if light['minutes_after_sunrise'] is None:
             sunrise = False
         else:
-            sunrise = is_past_sunrise(location['latitude'], location['longitude'], light['minutes_after_sunrise'], TIMEZONE)
+            sunrise = is_sunrise(location['latitude'], location['longitude'], light['minutes_after_sunrise'], current_time)
 
         if light['brand'] == SMARTTHINGS:
             smarthings_settings = get_settings(property, SMARTTHINGS)
@@ -187,6 +200,44 @@ def process_property_lights(property, reservations, current_time, property_updat
         property_updates.extend(updates)
         property_errors.extend(errors)
 
+def process_property_thermostats(property, reservations, current_time, property_updates, property_errors):
+    thermostats = json.loads(property['Thermostats'])
+    location =json.loads( property['Location'])
+    property_name = property['PartitionKey']
+    
+
+    for thermostat in thermostats:
+        logging.info(f"Processing thermostat: {thermostat['brand']} - {thermostat['manufacture']} - {thermostat['name']}")
+
+        if reservations:
+            for reservation in reservations:
+                checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS, TIMEZONE)
+                checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS, TIMEZONE)
+
+                if checkin_time <= current_time < checkout_time:
+                    filtered_thermostat = filter_by_key(thermostat, "temperatures", When.RESERVATIONS_ONLY.value)
+                    break
+                else:
+                    filtered_thermostat = filter_by_key(thermostat, "temperatures", When.NON_RESERVATIONS.value)
+        else:
+            filtered_thermostat = filter_by_key(thermostat, "temperatures", When.NON_RESERVATIONS.value)
+
+        logging.info(f"filtered_thermostat by When: {filtered_thermostat}")
+
+        if not is_valid_hour(filtered_thermostat, current_time):
+            logging.info(f"Not a valid hour for {thermostat['name']} at {property_name}")
+            continue
+        
+
+        mode, cool_temp, heat_temp = get_thermostat_settings(location, reservation=bool(reservations), mode=None, temperatures=filtered_thermostat['temperatures'])
+
+        if thermostat['brand'] == SMARTTHINGS:
+            smarthings_settings = get_settings(property, SMARTTHINGS)
+            updates, errors = smartthings_thermostats.sync(thermostat, mode, cool_temp, heat_temp, property_name, smarthings_settings['location'], reservations, current_time)
+        
+        property_updates.extend(updates)
+        property_errors.extend(errors)
+
 
 if __name__ == "__main__" and LOCAL_DEVELOPMENT:
-    process_reservations([Devices.LIGHTS])
+    process_reservations([Devices.THERMOSTATS])
