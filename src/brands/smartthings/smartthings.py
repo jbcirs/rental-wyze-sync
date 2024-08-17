@@ -28,6 +28,20 @@ HEADERS = {
     'Content-Type': 'application/json'
 }
 
+def send_command(url, command):
+    payload = {"commands": [command]}
+
+    response = requests.post(url, headers=HEADERS, json=payload)
+
+    if response.status_code != 200:
+        logging.info(f"Failed to execute command '{command['command']}'. Status code: {response.status_code}")
+        logging.info(f"Response: {response.text}")
+        return False
+    
+    logging.info(f"Command '{command['command']}' executed successfully.")
+
+    return True
+
 def get_all_locations():
     response = requests.get(f'{BASE_URL}/locations', headers=HEADERS)
 
@@ -79,6 +93,20 @@ def get_device_status(device_id):
     response.raise_for_status()
     return response.json()
 
+def refresh_device_status(device_id):
+    url = f"{BASE_URL}/devices/{device_id}/commands"
+    payload = {
+        "commands": [
+            {
+            "component": "main",
+            "capability": "refresh",
+            "command": "refresh"
+            }
+        ]
+    }
+
+    return send_command(url,payload)
+
 def switch(device_id, state=True):
     if device_id is None:
         logging.info(f"Device '{device_id}' not found.")
@@ -104,20 +132,6 @@ def switch(device_id, state=True):
         return False
 
     response.raise_for_status()
-    return True
-
-def send_command(url, command):
-    payload = {"commands": [command]}
-
-    response = requests.post(url, headers=HEADERS, json=payload)
-
-    if response.status_code != 200:
-        logging.info(f"Failed to execute command '{command['command']}'. Status code: {response.status_code}")
-        logging.info(f"Response: {response.text}")
-        return False
-    
-    logging.info(f"Command '{command['command']}' executed successfully.")
-
     return True
 
 def set_thermostat(device_id, device_name, mode, cool_temp=None, heat_temp=None, fan_mode="auto"):

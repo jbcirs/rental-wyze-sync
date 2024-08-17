@@ -20,7 +20,7 @@ def get_utc_offset():
     return int(utc_offset.total_seconds() / 3600)
 
 def get_data(lat, lng):
-    utc_offset = get_utc_offset(TIMEZONE)
+    utc_offset = get_utc_offset()
     url = "https://aa.usno.navy.mil/api/rstt/oneday"
     params = {
         'date': datetime.now().strftime('%Y-%m-%d'),
@@ -44,17 +44,17 @@ def parse_time(time_str):
 
 def sunset(data):
     sunset_str = data['properties']['data']['sundata'][3]['time']
-    sunset = parse_time(sunset_str, TIMEZONE)
-    sunset = (sunset + timedelta(minutes=MINUTES_OFFSET_SUNSET)).time()
+    sunset = parse_time(sunset_str)
+    sunset = sunset + timedelta(minutes=MINUTES_OFFSET_SUNSET)
     return sunset
 
 def sunrise(data):
     sunrise_str =  data['properties']['data']['sundata'][1]['time']
-    sunrise = parse_time(sunrise_str, TIMEZONE)
-    sunrise = (sunrise + timedelta(minutes=MINUTES_OFFSET_SUNRISE)).time()
+    sunrise = parse_time(sunrise_str)
+    sunrise = sunrise + timedelta(minutes=MINUTES_OFFSET_SUNRISE)
     return sunrise
 
-def is_sunset(lat, lng, minutes, current_time_local):
+def is_sunset(lat, lng, current_time_local):
     try:
         data = get_data(lat, lng)
 
@@ -73,7 +73,7 @@ def is_sunset(lat, lng, minutes, current_time_local):
         logging.error(f"Error in is_before_sunset: {e}")
         return False
 
-def is_sunrise(lat, lng, minutes, current_time_local):
+def is_sunrise(lat, lng, current_time_local):
     try:
         data = get_data(lat, lng)
 
