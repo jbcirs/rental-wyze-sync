@@ -1,8 +1,8 @@
-import logging
 import os
 import time
 import pytz
 import json
+from logger import Logger
 from typing import List
 from devices import Devices
 from datetime import datetime, timedelta
@@ -12,6 +12,7 @@ from wyze_sdk import Client
 from hospitable import authenticate_hospitable, get_properties, get_reservations
 from slack_notify import send_slack_message, send_summary_slack_message
 import brands.wyze.locks as wyze_lock
+import brands.wyze.thermostats as wyze_thermostats
 from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
@@ -36,6 +37,8 @@ LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'tru
 STORAGE_ACCOUNT_NAME = os.environ['STORAGE_ACCOUNT_NAME']
 TIMEZONE = os.environ['TIMEZONE']
 ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
+
+logger = Logger()
 
 if LOCAL_DEVELOPMENT:
     STORAGE_CONNECTION_STRING = os.environ['STORAGE_CONNECTION_STRING']
@@ -62,7 +65,7 @@ def active_property(devices: List[Devices]):
 
         # Process each active entry
         for entry in active_entries:
-            logging.info(f"Processing entry with PartitionKey: {entry['PartitionKey']}, RowKey: {entry['RowKey']}")
+            logger.info(f"Processing entry with PartitionKey: {entry['PartitionKey']}, RowKey: {entry['RowKey']}")
             
             for device in devices:
                 # Check if the device property exists and is not empty
@@ -70,13 +73,13 @@ def active_property(devices: List[Devices]):
                     try:
                         properties.append(entry)
                     except json.JSONDecodeError as json_err:
-                        logging.error(f"JSON decoding error for entry {entry['RowKey']}: {str(json_err)}")
+                        logger.error(f"JSON decoding error for entry {entry['RowKey']}: {str(json_err)}")
                     except Exception as e:
-                        logging.error(f"Error processing locks for entry {entry['RowKey']}: {str(e)}")
+                        logger.error(f"Error processing locks for entry {entry['RowKey']}: {str(e)}")
                 else:
-                    logging.warning(f"No '{device.value}' property found or '{device.value}' property is empty for entry {entry['RowKey']}")
+                    logger.warning(f"No '{device.value}' property found or '{device.value}' property is empty for entry {entry['RowKey']}")
     except Exception as e:
-        logging.error(f"An error occurred while querying the table: {str(e)}")
+        logger.error(f"An error occurred while querying the table: {str(e)}")
 
     return properties
     
@@ -88,13 +91,13 @@ def get_settings(property, brand):
     return None
 
 def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_guest_codes=False):
-    logging.info('Processing reservations.')
+    logger.info('Processing reservations.')
 
     try:
-        logging.info(f"Server Time: {datetime.now()}")
+        logger.info(f"Server Time: {datetime.now()}")
         timezone = pytz.timezone(TIMEZONE)
         current_time = datetime.now(timezone)
-        logging.info(f"current_time: {current_time}")
+        logger.info(f"current_time: {current_time}")
 
         hospitable_token = authenticate_hospitable()
         if not hospitable_token:
@@ -112,7 +115,6 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
             return
 
         wyze_client = Client(token=wyze_token)
-        wyze_locks_client = wyze_client.locks
 
         table_properties = active_property(devices)
         
@@ -135,20 +137,22 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
                 process_property_lights(property, reservations, current_time, property_updates, property_errors)
 
             if Devices.THERMOSTATS in devices:
-                process_property_thermostats(property, reservations, current_time, property_updates, property_errors)
+                wyze_thermostats_client = wyze_client.thermostats
+                process_property_thermostats(property, reservations, wyze_thermostats_client, current_time, property_updates, property_errors)
 
             if not reservations and ALWAYS_SEND_SLACK_SUMMARY:
                 send_slack_message(f"No reservations for property {property_name}.")
                 #continue
             
             if Devices.LOCKS in devices:
+                wyze_locks_client = wyze_client.locks
                 process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors)
 
             if ALWAYS_SEND_SLACK_SUMMARY or any([property_deletions, property_updates, property_additions, property_errors]):
                 send_summary_slack_message(property_name, property_deletions, property_updates, property_additions, property_errors)
 
     except Exception as e:
-        logging.error(f"Error in function: {str(e)}")
+        logger.error(f"Error in function: {str(e)}")
         send_slack_message(f"Error in function: {str(e)}")
 
 def process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors):
@@ -156,7 +160,7 @@ def process_property_locks(property, reservations, wyze_locks_client, current_ti
     property_name = property['PartitionKey']
     
     for lock in locks:
-        logging.info(f"Processing lock: {lock['brand']} - {lock['name']}")
+        logger.info(f"Processing lock: {lock['brand']} - {lock['name']}")
 
         if lock['brand'] == WYZE:
             deletions, updates, additions, errors = wyze_lock.sync(wyze_locks_client, lock['name'], property_name, reservations, current_time, timezone, delete_all_guest_codes)
@@ -176,7 +180,7 @@ def process_property_lights(property, reservations, current_time, property_updat
     property_name = property['PartitionKey']
 
     for light in lights:
-        logging.info(f"Processing light: {light['brand']} - {light['name']}")
+        logger.info(f"Processing light: {light['brand']} - {light['name']}")
         updates = []
         errors = []
 
@@ -192,13 +196,14 @@ def process_property_lights(property, reservations, current_time, property_updat
         property_updates.extend(updates)
         property_errors.extend(errors)
 
-def process_property_thermostats(property, reservations, current_time, property_updates, property_errors):
+def process_property_thermostats(property, reservations, wyze_thermostats_client, current_time, property_updates, property_errors):
     thermostats = json.loads(property['Thermostats'])
     location =json.loads( property['Location'])
     property_name = property['PartitionKey']
 
     for thermostat in thermostats:
-        logging.info(f"Processing thermostat: {thermostat['brand']} - {thermostat['manufacture']} - {thermostat['name']}")
+        logger.info(f"Processing thermostat: {thermostat['brand']} - {thermostat['manufacture']} - {thermostat['name']}")
+        has_reservation = False
 
         if reservations:
             for reservation in reservations:
@@ -207,27 +212,31 @@ def process_property_thermostats(property, reservations, current_time, property_
 
                 if checkin_time <= current_time < checkout_time:
                     filtered_thermostat = filter_by_key(thermostat, "temperatures", When.RESERVATIONS_ONLY.value)
+                    has_reservation = True
                     break
                 else:
                     filtered_thermostat = filter_by_key(thermostat, "temperatures", When.NON_RESERVATIONS.value)
         else:
             filtered_thermostat = filter_by_key(thermostat, "temperatures", When.NON_RESERVATIONS.value)
 
-        logging.info(f"filtered_thermostat by When: {filtered_thermostat}")
+        logger.info(f"filtered_thermostat by When: {filtered_thermostat}")
 
         if not is_valid_hour(filtered_thermostat, current_time):
-            logging.info(f"Not a valid hour for {thermostat['name']} at {property_name}")
+            logger.info(f"Not a valid hour for {thermostat['name']} at {property_name}")
             continue
+        
+        mode, cool_temp, heat_temp = get_thermostat_settings(location, reservation=has_reservation, mode=None, temperatures=filtered_thermostat['temperatures'])
 
-        mode, cool_temp, heat_temp = get_thermostat_settings(location, reservation=bool(reservations), mode=None, temperatures=filtered_thermostat['temperatures'])
-
-        if thermostat['brand'] == SMARTTHINGS:
-            smarthings_settings = get_settings(property, SMARTTHINGS)
-            updates, errors = smartthings_thermostats.sync(thermostat, mode, cool_temp, heat_temp, property_name, smarthings_settings['location'], reservations, current_time)
+        if thermostat['brand'] == WYZE:
+            updates, errors = wyze_thermostats.sync(wyze_thermostats_client, thermostat, mode, cool_temp, heat_temp, property_name)
+        
+        # elif thermostat['brand'] == SMARTTHINGS:
+        #     smarthings_settings = get_settings(property, SMARTTHINGS)
+        #     updates, errors = smartthings_thermostats.sync(thermostat, mode, cool_temp, heat_temp, property_name, smarthings_settings['location'])
         
         property_updates.extend(updates)
         property_errors.extend(errors)
 
 
 if __name__ == "__main__" and LOCAL_DEVELOPMENT:
-    process_reservations([Devices.LIGHTS])
+    process_reservations([Devices.THERMOSTATS])

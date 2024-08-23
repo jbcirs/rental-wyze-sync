@@ -1,4 +1,3 @@
-import logging
 from devices import Device
 from slack_notify import send_slack_message
 from brands.smartthings.smartthings import *
@@ -17,17 +16,17 @@ def switch_light(light_id,state,light_name,property_name,updates,errors):
 
     if current_status is None or current_status != light_status:
         if switch(light_id, state):
-            logging.info(f"Switched {Device.LIGHT.value} {light_status}: {light_name} at {property_name}")
+            logger.info(f"Switched {Device.LIGHT.value} {light_status}: {light_name} at {property_name}")
             updates.append(f"{Device.LIGHT.value} {light_status} - {property_name} - {light_name}")
         else:
             errors.append(f"Switching {Device.LIGHT.value} for {light_name} at {property_name}")
     else:
-        logging.info(f"Switch {Device.LIGHT.value} already {light_status}: {light_name} at {property_name}, no change required")
+        logger.info(f"Switch {Device.LIGHT.value} already {light_status}: {light_name} at {property_name}, no change required")
     
     return updates, errors
 
 def sync(light, property_name, location, light_state=False):
-    logging.info(f'Processing SmartThings {Device.LIGHT.value} reservations.')
+    logger.info(f'Processing SmartThings {Device.LIGHT.value} reservations.')
     updates = []
     errors = []
 
@@ -50,7 +49,7 @@ def sync(light, property_name, location, light_state=False):
 
     except Exception as e:
         error = f"Error in SmatThings {Device.LIGHT.value} function: {str(e)}"
-        logging.error(error)
+        logger.error(error)
         errors.append(error)
         send_slack_message(f"Error in SmatThings {Device.LIGHT.value} function: {str(e)}")
 

@@ -1,7 +1,4 @@
-import logging
 import os
-import time
-import pytz
 from devices import Device
 from datetime import datetime
 from slack_notify import send_slack_message
@@ -19,7 +16,7 @@ TIMEZONE = os.environ['TIMEZONE']
 ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
 
 def sync(lock_name, property_name, location, reservations, current_time):
-    logging.info(f'Processing SmartThings {Device.LOCK.value} reservations.')
+    logger.info(f'Processing SmartThings {Device.LOCK.value} reservations.')
     deletions = []
     updates = []
     additions = []
@@ -55,7 +52,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
 
             if checkin_time <= current_time < checkout_time:
                 if not find_user_id_by_name(lock, label):
-                    logging.info(f"ADD: {property_name}; label: {label}")
+                    logger.info(f"ADD: {property_name}; label: {label}")
                     if add_user_code(lock, user_name, phone_last4):
                         additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
                     else:
@@ -76,7 +73,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
 
     except Exception as e:
         error = f"Error in SmatThings {Device.LOCK.value} function: {str(e)}"
-        logging.error(error)
+        logger.error(error)
         errors.append(error)
         send_slack_message(f"Error in SmatThings {Device.LOCK.value} function: {str(e)}")
 

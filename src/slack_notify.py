@@ -1,4 +1,4 @@
-import logging
+from logger import Logger
 import os
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -8,6 +8,8 @@ from azure.keyvault.secrets import SecretClient
 SLACK_CHANNEL = os.environ['SLACK_CHANNEL']
 VAULT_URL = os.environ["VAULT_URL"]
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
+
+logger = Logger()
 
 if LOCAL_DEVELOPMENT:
     SLACK_TOKEN = os.environ.get("SLACK_TOKEN")
@@ -26,7 +28,7 @@ def send_slack_message(message):
     try:
         slack_client.chat_postMessage(channel=SLACK_CHANNEL, text=message)
     except SlackApiError as e:
-        logging.error(f"Slack API Error: {str(e)}")
+        logger.error(f"Slack API Error: {str(e)}")
 
 def send_summary_slack_message(property_name, deletions, updates, additions, errors):
     message = f"Property: {property_name}\n"

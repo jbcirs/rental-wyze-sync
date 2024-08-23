@@ -1,12 +1,14 @@
 import os
 import requests
-import logging
+from logger import Logger
 from datetime import datetime, timedelta
 import pytz
 
 MINUTES_OFFSET_SUNSET = 0
 MINUTES_OFFSET_SUNRISE = 0
 TIMEZONE = os.environ['TIMEZONE']
+
+logger = Logger()
 
 def set_offset_minutes(sunset_minutes,sunrise_minutes):
     global MINUTES_OFFSET_SUNSET
@@ -31,7 +33,7 @@ def get_data(lat, lng):
     data = response.json()
 
     if 'error' in data:
-        logging.error("Error fetching data from USNO API")
+        logger.error("Error fetching data from USNO API")
     
     return data
 
@@ -59,7 +61,7 @@ def is_sunset(lat, lng, current_time_local):
         data = get_data(lat, lng)
 
         if not data:
-            logging.error("No data from USNO API")
+            logger.error("No data from USNO API")
             return False
 
         sunset_time = sunset(data)
@@ -70,7 +72,7 @@ def is_sunset(lat, lng, current_time_local):
         return False
 
     except Exception as e:
-        logging.error(f"Error in is_before_sunset: {e}")
+        logger.error(f"Error in is_before_sunset: {e}")
         return False
 
 def is_sunrise(lat, lng, current_time_local):
@@ -78,7 +80,7 @@ def is_sunrise(lat, lng, current_time_local):
         data = get_data(lat, lng)
 
         if not data:
-            logging.error("No data from USNO API")
+            logger.error("No data from USNO API")
             return False
 
         sunset_time = sunset(data)
@@ -88,5 +90,5 @@ def is_sunrise(lat, lng, current_time_local):
             return True
         return False
     except Exception as e:
-        logging.error(f"Error in is_past_sunrise: {e}")
+        logger.error(f"Error in is_past_sunrise: {e}")
         return False

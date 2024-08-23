@@ -1,4 +1,4 @@
-import logging
+from logger import Logger
 import os
 from devices import Device
 from slack_notify import send_slack_message
@@ -10,6 +10,8 @@ from when import When
 CHECK_IN_OFFSET_HOURS = int(os.environ['CHECK_IN_OFFSET_HOURS'])
 CHECK_OUT_OFFSET_HOURS = int(os.environ['CHECK_OUT_OFFSET_HOURS'])
 TIMEZONE = os.environ['TIMEZONE']
+
+logger = Logger()
 
 def should_light_be_on(start_time_str, stop_time_str, current_time):
     if start_time_str is not None and stop_time_str is not None:
@@ -39,7 +41,7 @@ def determine_light_state(light, current_time, before_sunset, past_sunrise):
     return False
 
 def get_light_settings(light, location, reservations, current_time):
-    logging.info(f'Processing {Device.LIGHT.value} reservations.')
+    logger.info(f'Processing {Device.LIGHT.value} reservations.')
     errors = []
     light_state = False
     change_state = False
@@ -58,8 +60,8 @@ def get_light_settings(light, location, reservations, current_time):
         else:
             sunrise = is_sunrise(location['latitude'], location['longitude'], current_time)
 
-        logging.info(f"sunset: {sunset}")
-        logging.info(f"sunrise: {sunrise}")
+        logger.info(f"sunset: {sunset}")
+        logger.info(f"sunrise: {sunrise}")
         
         if light['when'] == When.RESERVATIONS_ONLY.value:
             if reservations:
@@ -79,7 +81,7 @@ def get_light_settings(light, location, reservations, current_time):
 
     except Exception as e:
         error = f"Error in {Device.LIGHT.value} function: {str(e)}"
-        logging.error(error)
+        logger.error(error)
         errors.append(error)
         send_slack_message(f"Error in {Device.LIGHT.value} function: {str(e)}")
 
