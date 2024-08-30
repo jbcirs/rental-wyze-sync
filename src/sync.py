@@ -225,14 +225,14 @@ def process_property_thermostats(property, reservations, wyze_thermostats_client
             logger.info(f"Not a valid hour for {thermostat['name']} at {property_name}")
             continue
         
-        mode, cool_temp, heat_temp = get_thermostat_settings(location, reservation=has_reservation, mode=None, temperatures=filtered_thermostat['temperatures'])
+        mode, cool_temp, heat_temp, thermostat_scenario = get_thermostat_settings(location, reservation=has_reservation, mode=None, temperatures=filtered_thermostat['temperatures'])
 
         if thermostat['brand'] == WYZE:
-            updates, errors = wyze_thermostats.sync(wyze_thermostats_client, thermostat, mode, cool_temp, heat_temp, property_name)
+            updates, errors = wyze_thermostats.sync(wyze_thermostats_client, thermostat, mode, cool_temp, heat_temp, thermostat_scenario, property_name)
         
-        # elif thermostat['brand'] == SMARTTHINGS:
-        #     smarthings_settings = get_settings(property, SMARTTHINGS)
-        #     updates, errors = smartthings_thermostats.sync(thermostat, mode, cool_temp, heat_temp, property_name, smarthings_settings['location'])
+        elif thermostat['brand'] == SMARTTHINGS:
+            smarthings_settings = get_settings(property, SMARTTHINGS)
+            updates, errors = smartthings_thermostats.sync(thermostat, mode, cool_temp, heat_temp, property_name, smarthings_settings['location'])
         
         property_updates.extend(updates)
         property_errors.extend(errors)

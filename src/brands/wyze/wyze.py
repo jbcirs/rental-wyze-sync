@@ -7,7 +7,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from brands.wyze.error_mapping import get_error_message
 from slack_notify import send_slack_message
-from wyze_sdk.models.devices.thermostats import Thermostat, ThermostatFanMode, ThermostatSystemMode
+from wyze_sdk.models.devices.thermostats import Thermostat, ThermostatFanMode, ThermostatSystemMode, ThermostatScenarioType
 from typing import Optional
 
 
@@ -64,6 +64,7 @@ def get_thermostat_status(client,device):
     except WyzeApiError as e:
         logger.error(f"Error retrieving thermostat status for {device.name}: {str(e)}")
         return None
+
 def set_thermostat_temperature(client, device, heating_setpoint, cooling_setpoint):
     try:
         client.set_temperature(
@@ -72,22 +73,32 @@ def set_thermostat_temperature(client, device, heating_setpoint, cooling_setpoin
             heating_setpoint=heating_setpoint,
             cooling_setpoint=cooling_setpoint
         )
-        logger.info(f"Temperature for {device.name} set to heating: {heating_setpoint}°F, cooling: {cooling_setpoint}°F.")
+        logger.info(f"Temperature for {device.nickname} set to heating: {heating_setpoint}°F, cooling: {cooling_setpoint}°F.")
+        
+        return True
+    
     except WyzeApiError as e:
-        logger.error(f"Failed to set temperature for {device.name}: {e}")
+        logger.error(f"Failed to set temperature for {device.nickname}: {e}")
+    
+    return False
 
-def set_thermostat_fan_mode(client, device, mode):
+def set_thermostat_fan_mode(client, device, fan_mode="auto"):
     # fan_mode options: ThermostatFanMode.AUTO, ThermostatFanMode.ON, etc.
     try:
-        fan_mode = map_to_fan_mode(mode)
+        fan_mode = map_to_fan_mode(fan_mode)
         client.set_fan_mode(
             device_mac=device.mac,
             device_model=device.product.model,
             fan_mode=fan_mode
         )
-        logger.info(f"Fan mode for {device.name} set to {fan_mode.name}.")
+        logger.info(f"Fan mode for {device.nickname} set to {fan_mode.name}.")
+
+        return True
+    
     except WyzeApiError as e:
-        logger.error(f"Failed to set fan mode for {device.name}: {e}")
+        logger.error(f"Failed to set fan mode for {device.nickname}: {e}")
+    
+    return False
 
 def set_thermostat_system_mode(client, device, mode):
     # system_mode options: ThermostatSystemMode.HEAT, ThermostatSystemMode.COOL, ThermostatSystemMode.AUTO, etc.
@@ -98,9 +109,33 @@ def set_thermostat_system_mode(client, device, mode):
             device_model=device.product.model,
             system_mode=system_mode
         )
-        print(f"System mode for {device.name} set to {system_mode.name}.")
+        logger.info(f"System mode for {device.nickname} set to {system_mode.name}.")
+
+        return True
+    
     except WyzeApiError as e:
-        print(f"Failed to set system mode for {device.name}: {e}")
+        logger.error(f"Failed to set system mode for {device.nickname}: {e}")
+
+    return False
+
+def set_thermostat_scenario(client, device, scenario):
+        # Set the thermostat to a specified scenario: 
+        # ThermostatScenarioType.HOME, ThermostatScenarioType.AWAY, or ThermostatScenarioType.SLEEP
+        try:
+            system_scenario = map_to_thermostat_scenario(scenario)
+            client.set_current_scenario(
+                device_mac=device.mac,
+                device_model=device.product.model,
+                scenario=system_scenario
+            )
+            logger.info(f"System mode for {device.nickname} set to {system_scenario.name}.")
+
+            return True
+        
+        except WyzeApiError as e:
+            logger.error(f"Failed to set scenario for {device.nickname}: {e}")
+
+        return False
 
 def get_lock_codes(locks_client, lock_mac):
     try:
@@ -193,6 +228,13 @@ def map_to_thermostat_mode(input_str: str) -> Optional[ThermostatSystemMode]:
 def map_to_fan_mode(input_str: str) -> Optional[ThermostatFanMode]:
     normalized_str = input_str.strip().lower()
     for mode in ThermostatFanMode:
+        if normalized_str == mode.codes or normalized_str == mode.description.lower():
+            return mode
+    return None
+
+def map_to_thermostat_scenario(input_str: str) -> Optional[ThermostatScenarioType]:
+    normalized_str = input_str.strip().lower()
+    for mode in ThermostatScenarioType:
         if normalized_str == mode.codes or normalized_str == mode.description.lower():
             return mode
     return None
