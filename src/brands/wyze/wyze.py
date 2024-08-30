@@ -1,20 +1,22 @@
-import logging
+from logger import Logger
 import os
 import time
-import pytz
-from datetime import datetime
 from wyze_sdk import Client
 from wyze_sdk.errors import WyzeApiError
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from brands.wyze.error_mapping import get_error_message
 from slack_notify import send_slack_message
+from wyze_sdk.models.devices.thermostats import Thermostat, ThermostatFanMode, ThermostatSystemMode, ThermostatScenarioType
+from typing import Optional
 
 
 VAULT_URL = os.environ["VAULT_URL"]
 TIMEZONE = os.environ['TIMEZONE']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
+
+logger = Logger()
 
 
 if LOCAL_DEVELOPMENT:
@@ -43,24 +45,103 @@ def get_wyze_token():
                 )
         return response['access_token']
     except WyzeApiError as e:
-        logging.error(f"Wyze API Error: {str(e)}")
+        logger.error(f"Wyze API Error: {str(e)}")
         return None
 
-def get_lock_info(locks_client, lock_name):
+def get_device_by_name(client, name):
     try:
-        locks = locks_client.list()
-        for lock in locks:
-            if lock.nickname == lock_name:
-                return lock
+        devices = client.list()
+        for device in devices:
+            if device.nickname == name:
+                return device
     except WyzeApiError as e:
-        logging.error(f"Error retrieving lock info for {lock_name}: {str(e)}")
+        logger.error(f"Error retrieving device info for {name}: {str(e)}")
     return None
+
+def get_thermostat_status(client,device):
+    try:
+        return client.info(device_mac=device.mac, device_model=device.product.model)
+    except WyzeApiError as e:
+        logger.error(f"Error retrieving thermostat status for {device.name}: {str(e)}")
+        return None
+
+def set_thermostat_temperature(client, device, heating_setpoint, cooling_setpoint):
+    try:
+        client.set_temperature(
+            device_mac=device.mac,
+            device_model=device.product.model,
+            heating_setpoint=heating_setpoint,
+            cooling_setpoint=cooling_setpoint
+        )
+        logger.info(f"Temperature for {device.nickname} set to heating: {heating_setpoint}°F, cooling: {cooling_setpoint}°F.")
+        
+        return True
+    
+    except WyzeApiError as e:
+        logger.error(f"Failed to set temperature for {device.nickname}: {e}")
+    
+    return False
+
+def set_thermostat_fan_mode(client, device, fan_mode="auto"):
+    # fan_mode options: ThermostatFanMode.AUTO, ThermostatFanMode.ON, etc.
+    try:
+        fan_mode = map_to_fan_mode(fan_mode)
+        client.set_fan_mode(
+            device_mac=device.mac,
+            device_model=device.product.model,
+            fan_mode=fan_mode
+        )
+        logger.info(f"Fan mode for {device.nickname} set to {fan_mode.name}.")
+
+        return True
+    
+    except WyzeApiError as e:
+        logger.error(f"Failed to set fan mode for {device.nickname}: {e}")
+    
+    return False
+
+def set_thermostat_system_mode(client, device, mode):
+    # system_mode options: ThermostatSystemMode.HEAT, ThermostatSystemMode.COOL, ThermostatSystemMode.AUTO, etc.
+    try:
+        system_mode = map_to_thermostat_mode(mode)
+        client.set_system_mode(
+            device_mac=device.mac,
+            device_model=device.product.model,
+            system_mode=system_mode
+        )
+        logger.info(f"System mode for {device.nickname} set to {system_mode.name}.")
+
+        return True
+    
+    except WyzeApiError as e:
+        logger.error(f"Failed to set system mode for {device.nickname}: {e}")
+
+    return False
+
+def set_thermostat_scenario(client, device, scenario):
+        # Set the thermostat to a specified scenario: 
+        # ThermostatScenarioType.HOME, ThermostatScenarioType.AWAY, or ThermostatScenarioType.SLEEP
+        try:
+            system_scenario = map_to_thermostat_scenario(scenario)
+            client.set_current_scenario(
+                device_mac=device.mac,
+                device_model=device.product.model,
+                scenario=system_scenario
+            )
+            logger.info(f"System mode for {device.nickname} set to {system_scenario.name}.")
+
+            return True
+        
+        except WyzeApiError as e:
+            logger.error(f"Failed to set scenario for {device.nickname}: {e}")
+
+        return False
 
 def get_lock_codes(locks_client, lock_mac):
     try:
         return locks_client.get_keys(device_mac=lock_mac)
     except WyzeApiError as e:
-        logging.error(f"Error retrieving lock codes for {lock_mac}: {str(e)}")
+        logger.error(f"Error retrieving lock codes for {lock_mac}: {str(e)}")
         return None
 
 def find_code(existing_codes, label):
@@ -75,15 +156,15 @@ def add_lock_code(locks_client, lock_mac, code, label, permission):
             permission=permission
         )
         if response['ErrNo'] != 0:
-            logging.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            logger.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
             return False
         
-        logging.info(f"{response}")
+        logger.info(f"{response}")
         time.sleep(WYZE_API_DELAY_SECONDS) # Slow down API calls for Wyze locks
 
         return True
     except WyzeApiError as e:
-        logging.error(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
+        logger.error(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
         send_slack_message(f"Error adding lock code {label} to {lock_mac}: {str(e)}")
 
 def update_lock_code(locks_client, lock_mac, code_id, code, label, permission):
@@ -97,15 +178,15 @@ def update_lock_code(locks_client, lock_mac, code_id, code, label, permission):
         )
 
         if response['ErrNo'] != 0:
-            logging.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            logger.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
             return False
         
-        logging.info(f"{response}")
+        logger.info(f"{response}")
         time.sleep(WYZE_API_DELAY_SECONDS) # Slow down API calls for Wyze locks
 
         return True
     except WyzeApiError as e:
-        logging.error(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
+        logger.error(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
         send_slack_message(f"Error updating lock code {code} in {lock_mac}: {str(e)}")
 
 def delete_lock_code(locks_client, lock_mac, code_id):
@@ -115,15 +196,15 @@ def delete_lock_code(locks_client, lock_mac, code_id):
             access_code_id=code_id
         )
         if response['ErrNo'] not in (0, 5021):
-            logging.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
+            logger.error(f"{get_error_message(response['ErrNo'])}; Original response: {response}")
             return False
             
-        logging.info(f"{response}")
+        logger.info(f"{response}")
         time.sleep(WYZE_API_DELAY_SECONDS) # Slow down API calls for Wyze locks
 
         return True
     except WyzeApiError as e:
-        logging.error(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
+        logger.error(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
         send_slack_message(f"Error deleting lock code {code_id} from {lock_mac}: {str(e)}")
 
 def get_user_id_from_existing_codes(existing_codes, user_id=None):
@@ -135,3 +216,25 @@ def get_user_id_from_existing_codes(existing_codes, user_id=None):
             return code.userid
 
     return user_id
+
+
+def map_to_thermostat_mode(input_str: str) -> Optional[ThermostatSystemMode]:
+    normalized_str = input_str.strip().lower()
+    for mode in ThermostatSystemMode:
+        if normalized_str == mode.codes or normalized_str == mode.description.lower():
+            return mode
+    return None
+
+def map_to_fan_mode(input_str: str) -> Optional[ThermostatFanMode]:
+    normalized_str = input_str.strip().lower()
+    for mode in ThermostatFanMode:
+        if normalized_str == mode.codes or normalized_str == mode.description.lower():
+            return mode
+    return None
+
+def map_to_thermostat_scenario(input_str: str) -> Optional[ThermostatScenarioType]:
+    normalized_str = input_str.strip().lower()
+    for mode in ThermostatScenarioType:
+        if normalized_str == mode.codes or normalized_str == mode.description.lower():
+            return mode
+    return None

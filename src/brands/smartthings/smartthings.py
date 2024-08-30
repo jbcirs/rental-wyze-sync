@@ -1,5 +1,5 @@
 import requests
-import logging
+from logger import Logger
 import os
 import json
 import time
@@ -8,6 +8,8 @@ from azure.keyvault.secrets import SecretClient
 
 VAULT_URL = os.environ["VAULT_URL"]
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
+
+logger = Logger()
 
 if LOCAL_DEVELOPMENT:
     SMARTTHINGS_TOKEN = os.environ["SMARTTHINGS_TOKEN"]
@@ -34,11 +36,11 @@ def send_command(url, command):
     response = requests.post(url, headers=HEADERS, json=payload)
 
     if response.status_code != 200:
-        logging.info(f"Failed to execute command '{command['command']}'. Status code: {response.status_code}")
-        logging.info(f"Response: {response.text}")
+        logger.info(f"Failed to execute command '{command['command']}'. Status code: {response.status_code}")
+        logger.info(f"Response: {response.text}")
         return False
     
-    logging.info(f"Command '{command['command']}' executed successfully.")
+    logger.info(f"Command '{command['command']}' executed successfully.")
 
     return True
 
@@ -46,8 +48,8 @@ def get_all_locations():
     response = requests.get(f'{BASE_URL}/locations', headers=HEADERS)
 
     if response.status_code != 200:
-        logging.info(f"Failed to get_all_locations. Status Code: {response.status_code}")
-        logging.info(f"Response: {response.content.decode()}")
+        logger.info(f"Failed to get_all_locations. Status Code: {response.status_code}")
+        logger.info(f"Response: {response.content.decode()}")
 
     response.raise_for_status()
     return response.json()['items']
@@ -65,8 +67,8 @@ def get_devices(location_id):
     if response.status_code == 200:
         return response.json()['items']
     else:
-        logging.info(f"Failed to retrieve devices. Status code: {response.status_code}")
-        logging.info(f"Response: {response.text}")
+        logger.info(f"Failed to retrieve devices. Status code: {response.status_code}")
+        logger.info(f"Response: {response.text}")
         return None
 
 def get_device_id_by_label(location_id,label):
@@ -75,7 +77,7 @@ def get_device_id_by_label(location_id,label):
     for device in devices:
         if device['label'] == label:
             return device['deviceId']
-    logging.info(f"No device label found called: {label} at {location_id}")
+    logger.info(f"No device label found called: {label} at {location_id}")
     return None
 
 def get_device_id_by_name(location_id,name):
@@ -84,7 +86,7 @@ def get_device_id_by_name(location_id,name):
     for device in devices:
         if device['name'] == name:
             return device['deviceId']
-    logging.info(f"No device label found called: {name} at {location_id}")
+    logger.info(f"No device label found called: {name} at {location_id}")
     return None
 
 def get_device_status(device_id):
@@ -109,7 +111,7 @@ def refresh_device_status(device_id):
 
 def switch(device_id, state=True):
     if device_id is None:
-        logging.info(f"Device '{device_id}' not found.")
+        logger.info(f"Device '{device_id}' not found.")
         return
 
     url = f"{BASE_URL}/devices/{device_id}/commands"
@@ -127,8 +129,8 @@ def switch(device_id, state=True):
     response = requests.post(url, headers=HEADERS, json=payload)
 
     if response.status_code != 200:
-        logging.info(f"Failed to switch. Status Code: {response.status_code}")
-        logging.info(f"Response: {response.content.decode()}")
+        logger.info(f"Failed to switch. Status Code: {response.status_code}")
+        logger.info(f"Response: {response.content.decode()}")
         return False
 
     response.raise_for_status()
@@ -233,8 +235,8 @@ def add_user_code(lock, user_name, code):
     response = requests.post(url, headers=HEADERS, json=payload)
 
     if response.status_code != 200:
-        logging.info(f"Failed to add user code. Status Code: {response.status_code}")
-        logging.info(f"Response: {response.content.decode()}")
+        logger.info(f"Failed to add user code. Status Code: {response.status_code}")
+        logger.info(f"Response: {response.content.decode()}")
         return False
 
     response.raise_for_status()
@@ -256,8 +258,8 @@ def delete_user_code(lock, user_id):
     response = requests.post(url, headers=HEADERS, json=payload)
 
     if response.status_code != 200:
-        logging.info(f"Failed to delete user code. Status Code: {response.status_code}")
-        logging.info(f"Response: {response.content.decode()}")
+        logger.info(f"Failed to delete user code. Status Code: {response.status_code}")
+        logger.info(f"Response: {response.content.decode()}")
         return False
 
     response.raise_for_status()
@@ -284,7 +286,7 @@ def print_locks_with_users(locks_with_users):
     print("")
 
 # def main():
-#     logging.info("Start Samrthings")
+#     logger.info("Start Samrthings")
 
 #     location_name = "Paradise Cove"
 #     location_id = find_location_by_name(location_name)

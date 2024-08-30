@@ -1,5 +1,7 @@
 from weather import get_weather_by_lat_long
-import logging
+from logger import Logger
+
+logger = Logger()
 
 
 
@@ -39,18 +41,27 @@ def get_comfortable_temperatures(mode, reservation=False, temperatures=None):
     
     return cool_temp, heat_temp
 
+def get_thermostat_scenario(reservation):
+    if reservation:
+        thermostat_scenario = 'home'
+    else:
+        thermostat_scenario = 'away'
+
+    return thermostat_scenario
+
 def get_thermostat_settings(location, reservation=False, mode=None, temperatures=None):
 
     current_weather = get_weather_by_lat_long(location['latitude'], location['longitude'])
     current_temp = current_weather['main']['temp']
     max_temp = current_weather['main']['temp_max']
     min_temp = current_weather['main']['temp_min']
-    logging.info(f"Weather Temperatures: Current: {current_temp}, High: {max_temp}, Low: {min_temp}")
+    logger.info(f"Weather Temperatures: Current: {current_temp}, High: {max_temp}, Low: {min_temp}")
     
     if mode is None:
         mode = determine_thermostat_mode(max_temp, min_temp)
 
     cool_temp, heat_temp = get_comfortable_temperatures(mode, reservation, temperatures)
-    logging.info(f"Thermostat Home Setting: Mode: {mode}, Cool: {cool_temp}, Heat: {heat_temp}")
+    thermostat_scenario = get_thermostat_scenario(reservation)
+    logger.info(f"Thermostat Settings: Mode: {mode}, Cool: {cool_temp}, Heat: {heat_temp}, Senerio: {thermostat_scenario}")
 
-    return mode, cool_temp, heat_temp
+    return mode, cool_temp, heat_temp, thermostat_scenario

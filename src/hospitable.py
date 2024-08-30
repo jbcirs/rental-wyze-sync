@@ -1,5 +1,5 @@
 import requests
-import logging
+from logger import Logger
 import pytz
 import jwt
 from datetime import datetime, timedelta, timezone
@@ -10,6 +10,8 @@ from azure.keyvault.secrets import SecretClient
 VAULT_URL = os.environ["VAULT_URL"]
 TIMEZONE = os.environ['TIMEZONE']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
+
+logger = Logger()
 
 if LOCAL_DEVELOPMENT:
     HOSPITABLE_EMAIL = os.environ["HOSPITABLE_EMAIL"]
@@ -39,9 +41,9 @@ def get_new_token():
             if not LOCAL_DEVELOPMENT:
                 client.set_secret("HOSPITABLE-TOKEN", token)
         except Exception as e:
-            logging.error(f"Error in update Hospitable token: {str(e)}")
+            logger.error(f"Error in update Hospitable token: {str(e)}")
         return token
-    logging.error('Failed to authenticate with Hospitable API.')
+    logger.error('Failed to authenticate with Hospitable API.')
     return None
 
 def token_is_valid(token):
@@ -53,15 +55,15 @@ def token_is_valid(token):
     except jwt.ExpiredSignatureError:
         return False
     except jwt.DecodeError:
-        logging.error('Failed to decode JWT token.')
+        logger.error('Failed to decode JWT token.')
         return False
 
 def authenticate_hospitable(token=None):
     if token and token_is_valid(token):
-        logging.info('Hospitable token valid')
+        logger.info('Hospitable token valid')
         return token
     else:
-        logging.info('Get new Hospitable token')
+        logger.info('Get new Hospitable token')
         return get_new_token()
 
 
@@ -71,7 +73,7 @@ def get_properties(token):
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         return response.json()['data']
-    logging.error('Failed to fetch properties from Hospitable API.')
+    logger.error('Failed to fetch properties from Hospitable API.')
     return None
 
 def get_reservations(token, property_id):
@@ -83,5 +85,5 @@ def get_reservations(token, property_id):
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         return response.json()['data']
-    logging.error(f'Failed to fetch reservations for property ID {property_id}.')
+    logger.error(f'Failed to fetch reservations for property ID {property_id}.')
     return None

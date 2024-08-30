@@ -1,8 +1,10 @@
 import time
 import json
-import logging
+from logger import Logger
 from datetime import datetime, timedelta
 import pytz
+
+logger = Logger()
 
 def format_datetime(date_str, offset_hours=0, timezone_str='UTC'):
     date = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
@@ -30,11 +32,11 @@ def validate_json(json_str):
         return json_obj
     except json.JSONDecodeError as e:
         error = f"Invalid JSON: {e.msg} at line {e.lineno}, column {e.colno}"
-        logging.error(error)
+        logger.error(error)
         raise ValueError(error)
     except Exception as e:
         error = f"An error occurred: {e}"
-        logging.error(error)
+        logger.error(error)
         raise ValueError(error)
     
 def filter_by_key(device, sub_key, key_value):
@@ -53,10 +55,10 @@ def filter_by_key(device, sub_key, key_value):
 
 def is_valid_hour(item, current_time):
     current_hour = current_time.hour
-    logging.info(f"current_hour: {current_hour}")
+    logger.info(f"current_hour: {current_hour}")
     
     rest_hours = [datetime.strptime(time, "%H:%M").hour for time in item.get("rest_times", [])]
-    logging.info(f"rest_hours: {rest_hours}")
+    logger.info(f"rest_hours: {rest_hours}")
     
     if current_hour in rest_hours:
         return True
