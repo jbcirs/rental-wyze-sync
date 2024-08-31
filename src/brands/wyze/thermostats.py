@@ -16,6 +16,10 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
     logger.info(f'Processing SmartThings {Device.THERMOSTAT.value} reservations.')
     updates = []
     errors = []
+    skip_successful_mode = False 
+    skip_successful_temp = False
+    skip_successful_fan = False
+    skip_successful_scenario = False
 
     try:
         thermostat_name = thermostat['name']
@@ -33,6 +37,7 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
                 update_successful_scenario = set_thermostat_scenario(client, thermostat_device, scenario)
             else:
                 logger.info("Scenario already set")
+                skip_successful_scenario = True
                 update_successful_scenario = True
 
             if thermostat_mode != map_to_thermostat_mode(mode):
@@ -40,6 +45,7 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
                 update_successful_mode = set_thermostat_system_mode(client, thermostat_device, mode)
             else:
                 logger.info("Thermostat mode already set")
+                skip_successful_mode = True
                 update_successful_mode = True
             
             if int(heat_temp) != int(heating_setpoint) or int(cool_temp) != int(cooling_setpoint):
@@ -47,6 +53,7 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
                 update_successful_temp = set_thermostat_temperature(client, thermostat_device, heat_temp, cool_temp)
             else:
                 logger.info("Tempeture already set")
+                skip_successful_temp = True
                 update_successful_temp = True
             
             if thermostat_fan_mode != map_to_fan_mode("auto"):
@@ -54,9 +61,13 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
                 update_successful_fan = set_thermostat_fan_mode(client, thermostat_device)
             else:
                 logger.info("Fan mode already set")
+                skip_successful_fan = True
                 update_successful_fan = True
+
+            if skip_successful_mode and skip_successful_temp and skip_successful_fan and skip_successful_scenario:
+                logger.info(f"Skipping, no update needed for {Device.THERMOSTAT.value} {thermostat_name} at {property_name}")
                 
-            if update_successful_mode and update_successful_temp and update_successful_fan and update_successful_scenario:
+            elif update_successful_mode and update_successful_temp and update_successful_fan and update_successful_scenario:
                 logger.info(f"Set {Device.THERMOSTAT.value} {thermostat_name} at {property_name}")
                 updates.append(f"{Device.THERMOSTAT.value} {property_name} - {thermostat_name}")
             else:
