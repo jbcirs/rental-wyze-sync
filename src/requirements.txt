@@ -12,3 +12,4 @@ pytz==2024.1
 slack-bolt==1.19.0
 fastapi==0.111.0
 json-log-formatter==1.0
+seam==1.22.0
