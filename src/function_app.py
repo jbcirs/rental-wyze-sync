@@ -26,7 +26,7 @@ else:
     SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
 
 if not NON_PROD:
-    @app.schedule(schedule="0 */30 * * * *", arg_name="mytimer", run_on_startup=True, use_monitor=True)
+    @app.schedule(schedule="0 */30 * * * *", arg_name="mytimer", run_on_startup=False, use_monitor=True)
     def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
         logging.info('Python timer trigger function executed at %s', mytimer)
 
