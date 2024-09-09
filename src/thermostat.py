@@ -1,4 +1,4 @@
-from weather import get_weather_by_lat_long
+from weather import get_weather_forecast
 from logger import Logger
 
 logger = Logger()
@@ -51,11 +51,11 @@ def get_thermostat_scenario(reservation):
 
 def get_thermostat_settings(location, reservation=False, mode=None, temperatures=None):
 
-    current_weather = get_weather_by_lat_long(location['latitude'], location['longitude'])
-    current_temp = current_weather['main']['temp']
-    max_temp = current_weather['main']['temp_max']
-    min_temp = current_weather['main']['temp_min']
-    logger.info(f"Weather Temperatures: Current: {current_temp}, High: {max_temp}, Low: {min_temp}")
+    current_temperature, temperature_min, temperature_max = get_weather_forecast(location['latitude'], location['longitude'])
+    current_temp = current_temperature
+    min_temp = temperature_min
+    max_temp = temperature_max
+    logger.info(f"Weather Temperatures: Current: {current_temp}, Low: {min_temp}, High: {max_temp}")
     
     if mode is None:
         mode = determine_thermostat_mode(max_temp, min_temp)
