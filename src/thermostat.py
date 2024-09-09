@@ -6,7 +6,7 @@ logger = Logger()
 
 
 def determine_thermostat_mode(max_temp, min_temp):
-    if (max_temp > 80 and min_temp > 68) or max_temp > 85:
+    if (max_temp > 80 and min_temp > 68) or max_temp > 90:
         return 'cool'
     elif (min_temp < 64 and max_temp < 70) or min_temp < 40:
         return 'heat'
