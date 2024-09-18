@@ -29,6 +29,7 @@ jobs:
       TF_VAR_wyze_password: ${{ secrets.WYZE_PASSWORD }}
       TF_VAR_wyze_key_id: ${{ secrets.WYZE_KEY_ID }}
       TF_VAR_wyze_api_key: ${{ secrets.WYZE_API_KEY }}
+      TF_VAR_seam_api_key: ${{ secrets.SEAM_API_KEY }}
       TF_VAR_slack_token: ${{ secrets.SLACK_TOKEN }}
       TF_VAR_aad_objectId_admin: ${{ secrets.AAD_OBJECTID_ADMIN }}
       TF_VAR_slack_signing_secret: ${{ secrets.SLACK_SIGNING_SECRET }}
