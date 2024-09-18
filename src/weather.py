@@ -4,6 +4,7 @@ import time
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from logger import Logger
+from slack_notify import send_slack_message
 
 logger = Logger()
 
@@ -85,11 +86,14 @@ def get_weather_forecast(latitude, longitude, retries=3):
             return current_temperature, temperature_min, temperature_max
         
         except requests.exceptions.RequestException as e:
-            logger.error(f"get_weather_forecast attempt {attempt + 1} error: {e}")
+            error_message = f"get_weather_forecast attempt {attempt + 1} error: {e}"
+            logger.error(error_message)
             attempt += 1
+            
             if attempt < retries:
                 wait_time = 2 ** attempt  # Exponential backoff
                 logger.info(f"Retrying in {wait_time} seconds...")
                 time.sleep(wait_time)
             else:
+                send_slack_message(error_message, "rentals-errors")
                 return {"error": str(e)}

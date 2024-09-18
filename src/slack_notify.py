@@ -24,9 +24,13 @@ else:
 # Initialize Slack client
 slack_client = WebClient(token=SLACK_TOKEN)
 
-def send_slack_message(message):
+def send_slack_message(message, channel=None):
+    if channel:
+        slack_channel = channel
+    else:
+        slack_channel = SLACK_CHANNEL
     try:
-        slack_client.chat_postMessage(channel=SLACK_CHANNEL, text=message)
+        slack_client.chat_postMessage(channel=channel, text=message)
     except SlackApiError as e:
         logger.error(f"Slack API Error: {str(e)}")
 
