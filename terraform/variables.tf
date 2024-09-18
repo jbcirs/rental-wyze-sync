@@ -118,3 +118,8 @@ variable "openweathermap_key" {
   description    = "OpenWeather api key"
   type           = string
 }
+
+variable "seam_api_key" {
+  description = "Seam API key"
+  type        = string
+}

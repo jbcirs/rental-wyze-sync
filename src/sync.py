@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from wyze_sdk import Client
+from seam import seam
 from hospitable import authenticate_hospitable, get_properties, get_reservations
 from slack_notify import send_slack_message, send_summary_slack_message
 import brands.wyze.locks as wyze_lock
@@ -17,6 +18,8 @@ from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
 import brands.smartthings.thermostats as smartthings_thermostats
+import brands.seam.locks as seam_lock
+from brands.seam.seam import get_seam_token
 from thermostat import get_thermostat_settings
 from azure.data.tables import TableServiceClient
 from utilty import format_datetime, filter_by_key, is_valid_hour
@@ -26,6 +29,7 @@ from when import When
 HOSPITABLE = "Hospitable"
 SMARTTHINGS = "smartthings"
 WYZE = "wyze"
+SEAM = "seam"
 
 # Configuration
 VAULT_URL = os.environ["VAULT_URL"]
@@ -116,6 +120,14 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
 
         wyze_client = Client(token=wyze_token)
 
+        ##SEAM
+        seam_token = get_seam_token()
+        if not seam_token:
+            send_slack_message("Unable to authenticate with Seam API.")
+            return
+        
+        seam_client = seam(api_key=seam_token)
+
         table_properties = active_property(devices)
         
         for property in table_properties:
@@ -169,6 +181,10 @@ def process_property_locks(property, reservations, wyze_locks_client, current_ti
             smarthings_settings = get_settings(property, SMARTTHINGS)
             deletions, updates, additions, errors = smartthings_lock.sync(lock['name'], property_name, smarthings_settings["location"], reservations, current_time)
         
+        elif lock['brand'] == SEAM:
+            deletions, updates, additions, errors = seam_lock.sync()
+
+
         property_deletions.extend(deletions)
         property_updates.extend(updates)
         property_additions.extend(additions)

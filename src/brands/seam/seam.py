@@ -12,17 +12,14 @@ logger = Logger()
 
 
 if LOCAL_DEVELOPMENT:
-    WYZE_EMAIL = os.environ.get("WYZE_EMAIL")
-    WYZE_PASSWORD = os.environ.get("WYZE_PASSWORD")
-    WYZE_KEY_ID = os.environ.get("WYZE_KEY_ID")
-    WYZE_API_KEY = os.environ.get("WYZE_API_KEY")
+    SEAM_API_KEY = os.environ.get("SEAM_API_KEY")
 else:
     # Azure Key Vault client
     credential = DefaultAzureCredential()
     client = SecretClient(vault_url=VAULT_URL, credential=credential)
 
     # Fetch secrets from Key Vault
-    WYZE_EMAIL = client.get_secret("WYZE-EMAIL").value
-    WYZE_PASSWORD = client.get_secret("WYZE-PASSWORD").value
-    WYZE_KEY_ID = client.get_secret("WYZE-KEY-ID").value
-    WYZE_API_KEY = client.get_secret("WYZE-API-KEY").value
+    SEAM_API_KEY = client.get_secret("WYZE-API-KEY").value
+
+def get_seam_token():
+    return SEAM_API_KEY
