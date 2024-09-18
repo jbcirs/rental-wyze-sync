@@ -1,5 +1,6 @@
 import os
 import requests
+import time
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from logger import Logger
@@ -35,53 +36,60 @@ def get_current_temperature_by_zip(zip_code, country_code='US'):
     current_temp = data['main']['temp']
     return current_temp
 
-import requests
-
-def get_weather_forecast(latitude, longitude):
+def get_weather_forecast(latitude, longitude, retries=3):
     logger.info(f"Get weather from api.weather.gov")
     point_url = f"https://api.weather.gov/points/{latitude},{longitude}"
     
-    try:
-        # Get grid coordinates for the given latitude and longitude
-        response = requests.get(point_url)
-        response.raise_for_status()  # Raise exception if the request fails
-        point_data = response.json()
+    attempt = 0
 
-        # Get the forecast URL
-        forecast_url = point_data['properties']['forecast']
+    while attempt < retries:
+        try:
+            # Get grid coordinates for the given latitude and longitude
+            response = requests.get(point_url)
+            response.raise_for_status()  # Raise exception if the request fails
+            point_data = response.json()
 
-        # Fetch the weather forecast
-        forecast_response = requests.get(forecast_url)
-        forecast_response.raise_for_status()  # Raise exception if the request fails
-        forecast_data = forecast_response.json()
+            # Get the forecast URL
+            forecast_url = point_data['properties']['forecast']
 
-        # Extract the current temperature
-        current_forecast = forecast_data['properties']['periods'][0]
-        current_temperature = current_forecast['temperature']
-        temperature_unit = current_forecast['temperatureUnit']
+            # Fetch the weather forecast
+            forecast_response = requests.get(forecast_url)
+            forecast_response.raise_for_status()  # Raise exception if the request fails
+            forecast_data = forecast_response.json()
 
-        temperature_min = None
-        temperature_max = None
+            # Extract the current temperature
+            current_forecast = forecast_data['properties']['periods'][0]
+            current_temperature = current_forecast['temperature']
+            temperature_unit = current_forecast['temperatureUnit']
 
-        # Loop through the periods to find today's min and max temperatures
-        for period in forecast_data['properties']['periods']:
-            if 'Today' in period['name'] or 'This Afternoon' in period['name']:
-                temperature_max = period['temperature']
-            if 'Tonight' in period['name']:
-                temperature_min = period['temperature']
+            temperature_min = None
+            temperature_max = None
 
-        logger.info(f"Current Temperature: {current_temperature} {temperature_unit}")
-        logger.info(f"Min Temperature Today: {temperature_min} {temperature_unit}")
-        logger.info(f"Max Temperature Today: {temperature_max} {temperature_unit}")
+            # Loop through the periods to find today's min and max temperatures
+            for period in forecast_data['properties']['periods']:
+                if 'Today' in period['name'] or 'This Afternoon' in period['name']:
+                    temperature_max = period['temperature']
+                if 'Tonight' in period['name']:
+                    temperature_min = period['temperature']
 
-        # If min/max is not found, return current_temperature
-        if temperature_min is None:
-            temperature_min = current_temperature
-        if temperature_max is None:
-            temperature_max = current_temperature
+            logger.info(f"Current Temperature: {current_temperature} {temperature_unit}")
+            logger.info(f"Min Temperature Today: {temperature_min} {temperature_unit}")
+            logger.info(f"Max Temperature Today: {temperature_max} {temperature_unit}")
 
-        return current_temperature, temperature_min, temperature_max
-    
-    except requests.exceptions.RequestException as e:
-        logger.error(f"get_weather_forecast error: {e}")
-        return {"error": str(e)}
+            # If min/max is not found, return current_temperature
+            if temperature_min is None:
+                temperature_min = current_temperature
+            if temperature_max is None:
+                temperature_max = current_temperature
+
+            return current_temperature, temperature_min, temperature_max
+        
+        except requests.exceptions.RequestException as e:
+            logger.error(f"get_weather_forecast attempt {attempt + 1} error: {e}")
+            attempt += 1
+            if attempt < retries:
+                wait_time = 2 ** attempt  # Exponential backoff
+                logger.info(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                return {"error": str(e)}
