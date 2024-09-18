@@ -30,7 +30,7 @@ def send_slack_message(message, channel=None):
     else:
         slack_channel = SLACK_CHANNEL
     try:
-        slack_client.chat_postMessage(channel=channel, text=message)
+        slack_client.chat_postMessage(channel=slack_channel, text=message)
     except SlackApiError as e:
         logger.error(f"Slack API Error: {str(e)}")
 
