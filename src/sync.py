@@ -210,7 +210,10 @@ def process_property_thermostats(property, reservations, wyze_thermostats_client
                 checkin_time = format_datetime(reservation['checkin'], CHECK_IN_OFFSET_HOURS, TIMEZONE)
                 checkout_time = format_datetime(reservation['checkout'], CHECK_OUT_OFFSET_HOURS, TIMEZONE)
 
-                if checkin_time <= current_time < checkout_time:
+                print(f"checkin_time: {checkin_time.date()}")
+                print(f"checkout_time: {checkout_time.date()}")
+
+                if checkin_time.date() <= current_time.date() < checkout_time.date():
                     filtered_thermostat = filter_by_key(thermostat, "temperatures", When.RESERVATIONS_ONLY.value)
                     has_reservation = True
                     break
