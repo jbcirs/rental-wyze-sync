@@ -53,7 +53,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
             if checkin_time <= current_time < checkout_time:
                 if not find_user_id_by_name(lock, label):
                     logger.info(f"ADD: {property_name}; label: {label}")
-                    if add_user_code(lock, user_name, phone_last4):
+                    if add_user_code(lock, label, phone_last4):
                         additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
                     else:
                         errors.append(f"Adding {Device.LOCK.value} Code for {lock_name}: {label}")
