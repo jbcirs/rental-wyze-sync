@@ -116,7 +116,7 @@ Table Object in JSON
     "Lights": [{"brand": "smartthings", "name": "String Lights", "when":"reservations_only", "minutes_before_sunset": 30, "minutes_after_sunrise": 30, "start_time":  null, "stop_time": "23:00"}],
     "Location": {"latitude":"42.3554334","longitude":"-71.060511"},
     "Locks": [ { "brand": "wyze", "name": "Boston - Main St - FD" }, { "brand": "smartthings", "name": "Backdoor" } ],
-    "Thermostats": [{"brand": "smartthings", "manufacture":"ecobee", "name": "Up Stairs", "temperatures": [{"when": "reservations_only", "mode":"cool", "cool_temp": 72, "heat_temp": 68}], "rest_times": ["01:00","16:00"]}, {"brand": "smartthings", "manufacture":"ecobee", "name": "Up Stairs", "temperatures": [{"when": "non_reservations", "mode":"auto", "cool_temp": 74, "heat_temp": 68}], "rest_times": ["01:00","06:00"] }]
+    "Thermostats": [{"brand": "smartthings", "manufacture":"ecobee", "name": "Up Stairs", "temperatures": [{"when": "reservations_only", "mode":"cool", "cool_temp": 72, "heat_temp": 68}], "rest_times": ["01:00","16:00"]}, {"brand": "smartthings", "manufacture":"ecobee", "name": "Up Stairs", "temperatures": [{"when": "non_reservations", "mode":"auto", "cool_temp": 74, "heat_temp": 68, "freeze_protection":{"freeze_temp":32,"heat_temp":60}}], "rest_times": ["01:00","06:00"] }]
 }
 ```
 
