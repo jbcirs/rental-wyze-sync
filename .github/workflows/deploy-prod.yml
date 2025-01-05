@@ -55,6 +55,9 @@ jobs:
           zip -rq ../src.zip ./*
           cd ..
 
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v
+
       - name: Terraform Init
         run: terraform init
         working-directory: ./terraform
