@@ -81,12 +81,15 @@ def get_thermostat_settings(thermostat, location, reservation=False, mode=None, 
 
     # Get freeze protection configuration from thermostat
     freeze_protection = None
+    freeze_protection_status = False
+
     if not reservation:
         # Look for non-reservation freeze protection in thermostat temperatures
         non_reservation_config = next(
             (temp for temp in thermostat.get('temperatures', []) if temp.get('when') == 'non_reservations'),
             None
         )
+        
         if non_reservation_config:
             freeze_protection = non_reservation_config.get('freeze_protection')
 
@@ -96,6 +99,7 @@ def get_thermostat_settings(thermostat, location, reservation=False, mode=None, 
         mode = freeze_mode
         cool_temp = freeze_cool_temp
         heat_temp = freeze_heat_temp
+        freeze_protection_status = True
     else:
         # Determine mode if not explicitly provided
         if mode is None:
@@ -110,4 +114,4 @@ def get_thermostat_settings(thermostat, location, reservation=False, mode=None, 
     thermostat_scenario = get_thermostat_scenario(reservation)
     logger.info(f"Thermostat Settings: Mode: {mode}, Cool: {cool_temp}, Heat: {heat_temp}, Scenario: {thermostat_scenario}")
 
-    return mode, cool_temp, heat_temp, thermostat_scenario
+    return mode, cool_temp, heat_temp, thermostat_scenario, freeze_protection_status
