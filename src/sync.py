@@ -230,9 +230,6 @@ def process_property_thermostats(property, reservations, wyze_thermostats_client
         
         mode, cool_temp, heat_temp, thermostat_scenario, freeze_protection = get_thermostat_settings(thermostat, location, reservation=has_reservation, mode=None, temperatures=filtered_thermostat['temperatures'])
 
-        if freeze_protection:
-            updates.append(f"Freeze protection override for {property_name} - {thermostat['name']}")
-
         if thermostat['brand'] == WYZE:
             updates, errors = wyze_thermostats.sync(wyze_thermostats_client, thermostat, mode, cool_temp, heat_temp, thermostat_scenario, property_name)
         
@@ -240,6 +237,9 @@ def process_property_thermostats(property, reservations, wyze_thermostats_client
             smarthings_settings = get_settings(property, SMARTTHINGS)
             updates, errors = smartthings_thermostats.sync(thermostat, mode, cool_temp, heat_temp, property_name, smarthings_settings['location'])
 
+        if freeze_protection:
+            updates.append(f"Freeze protection override for {property_name} - {thermostat['name']}")
+        
         property_updates.extend(updates)
         property_errors.extend(errors)
 
