@@ -21,24 +21,86 @@ else:
     # Fetch secrets from Key Vault
     OPENWEATHERMAP_KEY = client.get_secret("OPENWEATHERMAP-KEY").value
 
-def get_weather_by_lat_long(lat, lon):
+def get_weather_by_lat_long(lat, lon, retries=3):
+    """
+    Get current weather data by latitude and longitude.
+    
+    Args:
+        lat: Latitude
+        lon: Longitude
+        retries: Number of retry attempts
+        
+    Returns:
+        Dictionary with weather data or error information
+    """
     url = f'http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={OPENWEATHERMAP_KEY}&units=imperial'
-    response = requests.get(url)
-    data = response.json()
-    # current_temp = current_weather['main']['temp']
-    # max_temp = current_weather['main']['temp_max']
-    # min_temp = current_weather['main']['temp_min']
-    return data
+    logger.info(f"Getting weather for coordinates: {lat}, {lon}")
+    
+    attempt = 0
+    while attempt < retries:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            logger.info(f"Successfully retrieved weather data for coordinates: {lat}, {lon}")
+            return data
+        except requests.exceptions.RequestException as e:
+            error_message = f"get_weather_by_lat_long attempt {attempt + 1} error: {e}"
+            logger.error(error_message)
+            attempt += 1
+            
+            if attempt < retries:
+                wait_time = 2 ** attempt  # Exponential backoff
+                logger.info(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                send_slack_message(error_message, "rentals-errors")
+                return {"error": str(e)}
 
-def get_current_temperature_by_zip(zip_code, country_code='US'):
+def get_current_temperature_by_zip(zip_code, country_code='US', retries=3):
+    """
+    Get current temperature by zip code.
+    
+    Args:
+        zip_code: Postal/ZIP code
+        country_code: Country code (default: 'US')
+        retries: Number of retry attempts
+        
+    Returns:
+        Current temperature or error dictionary
+    """
     url = f'http://api.openweathermap.org/data/2.5/weather?zip={zip_code},{country_code}&appid={OPENWEATHERMAP_KEY}&units=imperial'
-    response = requests.get(url)
-    data = response.json()
-    current_temp = data['main']['temp']
-    return current_temp
+    logger.info(f"Getting temperature for zip code: {zip_code}, {country_code}")
+    
+    attempt = 0
+    while attempt < retries:
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            current_temp = data['main']['temp']
+            logger.info(f"Current temperature for {zip_code}: {current_temp}°F")
+            return current_temp
+        except requests.exceptions.RequestException as e:
+            error_message = f"get_current_temperature_by_zip attempt {attempt + 1} error: {e}"
+            logger.error(error_message)
+            attempt += 1
+            
+            if attempt < retries:
+                wait_time = 2 ** attempt  # Exponential backoff
+                logger.info(f"Retrying in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                send_slack_message(error_message, "rentals-errors")
+                return {"error": str(e)}
+        except (KeyError, ValueError) as e:
+            error_message = f"Data parsing error: {e}"
+            logger.error(error_message)
+            send_slack_message(error_message, "rentals-errors")
+            return {"error": str(e)}
 
 def get_weather_forecast(latitude, longitude, retries=3):
-    logger.info(f"Get weather from api.weather.gov")
+    logger.info(f"Getting weather forecast for coordinates: {latitude}, {longitude}")
     point_url = f"https://api.weather.gov/points/{latitude},{longitude}"
     
     attempt = 0
