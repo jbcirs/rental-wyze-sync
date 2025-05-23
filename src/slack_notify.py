@@ -25,16 +25,51 @@ else:
 slack_client = WebClient(token=SLACK_TOKEN)
 
 def send_slack_message(message, channel=None):
+    """
+    Send a message to a Slack channel.
+    
+    Args:
+        message: Message text to send
+        channel: Channel name (uses default if None)
+    
+    Returns:
+        Boolean indicating success or failure
+    """
     if channel:
         slack_channel = channel
     else:
         slack_channel = SLACK_CHANNEL
+    
+    logger.info(f"Sending Slack message to #{slack_channel}")
+    
     try:
-        slack_client.chat_postMessage(channel=slack_channel, text=message)
+        response = slack_client.chat_postMessage(channel=slack_channel, text=message)
+        if response['ok']:
+            logger.info(f"Successfully sent message to #{slack_channel}")
+            return True
+        else:
+            logger.error(f"Failed to send message: {response['error']}")
+            return False
     except SlackApiError as e:
         logger.error(f"Slack API Error: {str(e)}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error sending Slack message: {str(e)}")
+        return False
 
 def send_summary_slack_message(property_name, deletions, updates, additions, errors):
+    """
+    Send a formatted summary message about property changes to Slack.
+    
+    Args:
+        property_name: Name of the rental property
+        deletions: List of deleted items
+        updates: List of updated items
+        additions: List of added items
+        errors: List of errors
+    """
+    logger.info(f"Preparing summary message for property: {property_name}")
+    
     message = f"Property: {property_name}\n"
     if not deletions and not updates and not additions and not errors:
         message += "_No Changes_"
@@ -43,4 +78,7 @@ def send_summary_slack_message(property_name, deletions, updates, additions, err
         message += "Updated:\n" + ("\n".join([f"`{item}`" for item in updates]) if updates else "_-None-_") + "\n"
         message += "Added:\n" + ("\n".join([f"`{item}`" for item in additions]) if additions else "_-None-_") + "\n"
         message += "Errors:\n" + ("\n".join([f"`{item}`" for item in errors]) if errors else "_-None-_") + "\n"
-    send_slack_message(message)
+    
+    result = send_slack_message(message)
+    if not result:
+        logger.warning(f"Failed to send summary message for {property_name}")
