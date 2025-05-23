@@ -1,173 +1,175 @@
 """
-Thermostat control logic for managing temperature settings based on weather,
-reservation status, and property configuration.
+Interface with the US Naval Observatory API to get sunrise and sunset data.
+Used to determine natural lighting conditions for controlling smart lights.
 """
-from weather import get_weather_forecast
+import os
+import requests
 from logger import Logger
+from datetime import datetime, timedelta
+import pytz
+
+# Default offset minutes (can be overridden)
+MINUTES_OFFSET_SUNSET = 0
+MINUTES_OFFSET_SUNRISE = 0
+TIMEZONE = os.environ['TIMEZONE']
 
 logger = Logger()
 
-def determine_thermostat_mode(max_temp, min_temp):
+def set_offset_minutes(sunset_minutes, sunrise_minutes):
     """
-    Determine the appropriate HVAC mode based on forecast temperatures.
+    Set global offset minutes for sunset and sunrise times.
     
     Args:
-        max_temp: Maximum forecast temperature
-        min_temp: Minimum forecast temperature
-        
-    Returns:
-        String representing mode: 'cool', 'heat', or 'auto'
+        sunset_minutes: Minutes to offset sunset time (positive = later)
+        sunrise_minutes: Minutes to offset sunrise time (positive = later)
     """
-    # Hot conditions - use cooling
-    if (max_temp > 80 and min_temp > 68) or max_temp > 90:
-        return 'cool'
-    # Cold conditions - use heating
-    elif (min_temp < 64 and max_temp < 70) or min_temp < 40:
-        return 'heat'
-    # Moderate conditions - use auto mode
-    else:
-        return 'auto'
+    global MINUTES_OFFSET_SUNSET
+    global MINUTES_OFFSET_SUNRISE
+    # Make sure we handle None values properly
+    MINUTES_OFFSET_SUNSET = sunset_minutes if sunset_minutes is not None else 0
+    MINUTES_OFFSET_SUNRISE = sunrise_minutes if sunrise_minutes is not None else 0
+    logger.info(f"Set sunset offset to {MINUTES_OFFSET_SUNSET} minutes and sunrise offset to {MINUTES_OFFSET_SUNRISE} minutes")
 
-def get_comfortable_temperatures(mode, reservation=False, temperatures=None):
+def get_utc_offset():
     """
-    Get appropriate temperature settings based on mode and reservation status.
+    Get the UTC offset for the configured timezone in hours.
+    
+    Returns:
+        Integer representing hours offset from UTC
+    """
+    local_timezone = pytz.timezone(TIMEZONE)
+    utc_offset = datetime.now(local_timezone).utcoffset()
+    return int(utc_offset.total_seconds() / 3600)
+
+def get_data(lat, lng):
+    """
+    Fetch sunrise/sunset data from the USNO API for a specific location.
     
     Args:
-        mode: HVAC mode ('cool', 'heat', or 'auto')
-        reservation: Whether there's an active reservation
-        temperatures: Custom temperature settings from configuration
+        lat: Latitude coordinate
+        lng: Longitude coordinate
         
     Returns:
-        Tuple of (cool_temp, heat_temp) setpoints
+        Dictionary of astronomical data including sunrise and sunset times
     """
-    # Set default temperature ranges based on reservation status
-    if reservation:
-        # More comfortable settings when guests are present
-        default_temperatures = {
-            'heat': {'cool_temp': 78, 'heat_temp': 74},
-            'cool': {'cool_temp': 74, 'heat_temp': 68},
-            'auto': {'cool_temp': 74, 'heat_temp': 70}
-        }
-    else:
-        # Energy-saving settings when property is vacant
-        default_temperatures = {
-            'heat': {'cool_temp': 85, 'heat_temp': 50},
-            'cool': {'cool_temp': 85, 'heat_temp': 50},
-            'auto': {'cool_temp': 85, 'heat_temp': 50}
-        }
+    utc_offset = get_utc_offset()
+    url = "https://aa.usno.navy.mil/api/rstt/oneday"
+    params = {
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'coords': f'{lat},{lng}',
+        'tz': utc_offset
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
 
-    # Override defaults with custom settings if provided
-    if temperatures:
-        mode_temps = next((temp for temp in temperatures if temp.get('mode') == mode), None)
-        if mode_temps:
-            cool_temp = mode_temps.get('cool_temp', default_temperatures[mode]['cool_temp'])
-            heat_temp = mode_temps.get('heat_temp', default_temperatures[mode]['heat_temp'])
-        else:
-            cool_temp = default_temperatures[mode]['cool_temp']
-            heat_temp = default_temperatures[mode]['heat_temp']
-    else:
-        cool_temp = default_temperatures[mode]['cool_temp']
-        heat_temp = default_temperatures[mode]['heat_temp']
+    if 'error' in data:
+        logger.error("Error fetching data from USNO API")
     
-    return cool_temp, heat_temp
+    return data
 
-def get_thermostat_scenario(reservation):
+def parse_time(time_str):
     """
-    Determine the thermostat scenario based on reservation status.
+    Parse a time string (HH:MM) into a timezone-aware datetime for today.
     
     Args:
-        reservation: Whether there's an active reservation
+        time_str: Time string in format "HH:MM"
         
     Returns:
-        String representing scenario: 'home' or 'away'
+        Timezone-aware datetime for today with the specified time
     """
-    if reservation:
-        thermostat_scenario = 'home'
-    else:
-        thermostat_scenario = 'away'
+    local_timezone = pytz.timezone(TIMEZONE)
+    time_parts = time_str.split(':')
+    now = datetime.now()
+    parsed_time = local_timezone.localize(datetime(now.year, now.month, now.day, int(time_parts[0]), int(time_parts[1])))
+    return parsed_time
 
-    return thermostat_scenario
-
-def check_and_override_for_freezing(min_temp, freeze_protection):
+def sunset(data):
     """
-    Check if the minimum temperature is below the freezing threshold
-    and override the thermostat to heat mode to protect water pipes.
+    Extract and adjust the sunset time from USNO data.
     
     Args:
-        min_temp: Minimum forecast temperature
-        freeze_protection: Configuration dict with freeze_temp and heat_temp settings
+        data: USNO API response data
         
     Returns:
-        Tuple of (mode, cool_temp, heat_temp) if freeze protection is needed,
-        or (None, None, None) if no override is necessary
+        Timezone-aware datetime representing sunset with configured offset
     """
-    if not freeze_protection:
-        return None, None, None  # No freeze protection defined; skip checking
+    sunset_str = data['properties']['data']['sundata'][3]['time']
+    sunset = parse_time(sunset_str)
+    sunset = sunset + timedelta(minutes=MINUTES_OFFSET_SUNSET)
+    return sunset
 
-    freezing_threshold = freeze_protection.get('freeze_temp', 32)  # Default to 32°F
-    pipe_protection_heat_temp = freeze_protection.get('heat_temp', 50)  # Default to 50°F
-
-    if min_temp <= freezing_threshold:
-        logger.warning(f"Temperature is below freezing threshold of {freezing_threshold}°F. Overriding to 'heat' mode at {pipe_protection_heat_temp}°F to protect water pipes.")
-        return 'heat', pipe_protection_heat_temp, pipe_protection_heat_temp
-
-    return None, None, None
-
-def get_thermostat_settings(thermostat, location, reservation=False, mode=None, temperatures=None):
+def sunrise(data):
     """
-    Determine the optimal thermostat settings based on weather, reservation status,
-    and thermostat configuration.
+    Extract and adjust the sunrise time from USNO data.
     
     Args:
-        thermostat: Thermostat configuration dictionary
-        location: Property location with latitude and longitude
-        reservation: Whether there's an active reservation
-        mode: Explicit HVAC mode to use (optional)
-        temperatures: Temperature configuration dictionary (optional)
+        data: USNO API response data
         
     Returns:
-        Tuple of (mode, cool_temp, heat_temp, thermostat_scenario, freeze_protection_status)
+        Timezone-aware datetime representing sunrise with configured offset
     """
-    # Fetch weather data for the property location
-    current_temperature, temperature_min, temperature_max = get_weather_forecast(location['latitude'], location['longitude'])
-    current_temp = current_temperature
-    min_temp = temperature_min
-    max_temp = temperature_max
-    logger.info(f"Weather Temperatures: Current: {current_temp}°F, Low: {min_temp}°F, High: {max_temp}°F")
+    sunrise_str =  data['properties']['data']['sundata'][1]['time']
+    sunrise = parse_time(sunrise_str)
+    sunrise = sunrise + timedelta(minutes=MINUTES_OFFSET_SUNRISE)
+    return sunrise
 
-    # Get freeze protection configuration from thermostat
-    freeze_protection = None
-    freeze_protection_status = False
-
-    if not reservation:
-        # Look for non-reservation freeze protection in thermostat temperatures
-        non_reservation_config = next(
-            (temp for temp in thermostat.get('temperatures', []) if temp.get('when') == 'non_reservations'),
-            None
-        )
+def is_sunset(lat, lng, current_time_local):
+    """
+    Check if the current time is after sunset or before sunrise (nighttime).
+    
+    Args:
+        lat: Latitude coordinate
+        lng: Longitude coordinate
+        current_time_local: Current timezone-aware datetime
         
-        if non_reservation_config:
-            freeze_protection = non_reservation_config.get('freeze_protection')
+    Returns:
+        True if it's nighttime, False otherwise
+    """
+    try:
+        data = get_data(lat, lng)
 
-    # Check for freezing conditions and override if necessary
-    freeze_mode, freeze_cool_temp, freeze_heat_temp = check_and_override_for_freezing(min_temp, freeze_protection)
-    if freeze_mode:
-        mode = freeze_mode
-        cool_temp = freeze_cool_temp
-        heat_temp = freeze_heat_temp
-        freeze_protection_status = True
-    else:
-        # Determine mode if not explicitly provided
-        if mode is None:
-            mode = determine_thermostat_mode(max_temp, min_temp)
+        if not data:
+            logger.error("No data from USNO API")
+            return False
 
-        # Fetch comfortable temperatures based on the determined mode
-        if temperatures is None:
-            temperatures = thermostat.get('temperatures', [])
-        cool_temp, heat_temp = get_comfortable_temperatures(mode, reservation, temperatures)
+        sunset_time = sunset(data)
+        sunrise_time = sunrise(data)
 
-    # Get thermostat scenario
-    thermostat_scenario = get_thermostat_scenario(reservation)
-    logger.info(f"Thermostat Settings: Mode: {mode}, Cool: {cool_temp}°F, Heat: {heat_temp}°F, Scenario: {thermostat_scenario}")
+        # It's night if we're after sunset or before sunrise
+        if current_time_local >= sunset_time or current_time_local < sunrise_time:
+            return True
+        return False
 
-    return mode, cool_temp, heat_temp, thermostat_scenario, freeze_protection_status
+    except Exception as e:
+        logger.error(f"Error in is_sunset: {e}")
+        return False
+
+def is_sunrise(lat, lng, current_time_local):
+    """
+    Check if the current time is after sunrise and before sunset (daytime).
+    
+    Args:
+        lat: Latitude coordinate
+        lng: Longitude coordinate
+        current_time_local: Current timezone-aware datetime
+        
+    Returns:
+        True if it's daytime, False otherwise
+    """
+    try:
+        data = get_data(lat, lng)
+
+        if not data:
+            logger.error("No data from USNO API")
+            return False
+
+        sunset_time = sunset(data)
+        sunrise_time = sunrise(data)
+
+        # It's day if we're after sunrise and before sunset
+        if current_time_local >= sunrise_time and current_time_local < sunset_time:
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error in is_sunrise: {e}")
+        return False
