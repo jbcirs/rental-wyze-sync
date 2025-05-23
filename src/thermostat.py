@@ -1,32 +1,62 @@
+"""
+Thermostat control logic for managing temperature settings based on weather,
+reservation status, and property configuration.
+"""
 from weather import get_weather_forecast
 from logger import Logger
 
 logger = Logger()
 
-
-
 def determine_thermostat_mode(max_temp, min_temp):
+    """
+    Determine the appropriate HVAC mode based on forecast temperatures.
+    
+    Args:
+        max_temp: Maximum forecast temperature
+        min_temp: Minimum forecast temperature
+        
+    Returns:
+        String representing mode: 'cool', 'heat', or 'auto'
+    """
+    # Hot conditions - use cooling
     if (max_temp > 80 and min_temp > 68) or max_temp > 90:
         return 'cool'
+    # Cold conditions - use heating
     elif (min_temp < 64 and max_temp < 70) or min_temp < 40:
         return 'heat'
+    # Moderate conditions - use auto mode
     else:
         return 'auto'
 
 def get_comfortable_temperatures(mode, reservation=False, temperatures=None):
+    """
+    Get appropriate temperature settings based on mode and reservation status.
+    
+    Args:
+        mode: HVAC mode ('cool', 'heat', or 'auto')
+        reservation: Whether there's an active reservation
+        temperatures: Custom temperature settings from configuration
+        
+    Returns:
+        Tuple of (cool_temp, heat_temp) setpoints
+    """
+    # Set default temperature ranges based on reservation status
     if reservation:
+        # More comfortable settings when guests are present
         default_temperatures = {
             'heat': {'cool_temp': 78, 'heat_temp': 74},
             'cool': {'cool_temp': 74, 'heat_temp': 68},
             'auto': {'cool_temp': 74, 'heat_temp': 70}
         }
     else:
+        # Energy-saving settings when property is vacant
         default_temperatures = {
             'heat': {'cool_temp': 85, 'heat_temp': 50},
             'cool': {'cool_temp': 85, 'heat_temp': 50},
             'auto': {'cool_temp': 85, 'heat_temp': 50}
         }
 
+    # Override defaults with custom settings if provided
     if temperatures:
         mode_temps = next((temp for temp in temperatures if temp.get('mode') == mode), None)
         if mode_temps:
@@ -42,6 +72,15 @@ def get_comfortable_temperatures(mode, reservation=False, temperatures=None):
     return cool_temp, heat_temp
 
 def get_thermostat_scenario(reservation):
+    """
+    Determine the thermostat scenario based on reservation status.
+    
+    Args:
+        reservation: Whether there's an active reservation
+        
+    Returns:
+        String representing scenario: 'home' or 'away'
+    """
     if reservation:
         thermostat_scenario = 'home'
     else:
@@ -53,7 +92,14 @@ def check_and_override_for_freezing(min_temp, freeze_protection):
     """
     Check if the minimum temperature is below the freezing threshold
     and override the thermostat to heat mode to protect water pipes.
-    Uses freeze_protection from the thermostat configuration.
+    
+    Args:
+        min_temp: Minimum forecast temperature
+        freeze_protection: Configuration dict with freeze_temp and heat_temp settings
+        
+    Returns:
+        Tuple of (mode, cool_temp, heat_temp) if freeze protection is needed,
+        or (None, None, None) if no override is necessary
     """
     if not freeze_protection:
         return None, None, None  # No freeze protection defined; skip checking
@@ -62,22 +108,32 @@ def check_and_override_for_freezing(min_temp, freeze_protection):
     pipe_protection_heat_temp = freeze_protection.get('heat_temp', 50)  # Default to 50°F
 
     if min_temp <= freezing_threshold:
-        logger.warning(f"Temperature is below freezing. Overriding to 'heat' mode to protect water pipes.")
+        logger.warning(f"Temperature is below freezing threshold of {freezing_threshold}°F. Overriding to 'heat' mode at {pipe_protection_heat_temp}°F to protect water pipes.")
         return 'heat', pipe_protection_heat_temp, pipe_protection_heat_temp
 
     return None, None, None
 
 def get_thermostat_settings(thermostat, location, reservation=False, mode=None, temperatures=None):
     """
-    Determine the thermostat settings based on weather, reservation status,
+    Determine the optimal thermostat settings based on weather, reservation status,
     and thermostat configuration.
+    
+    Args:
+        thermostat: Thermostat configuration dictionary
+        location: Property location with latitude and longitude
+        reservation: Whether there's an active reservation
+        mode: Explicit HVAC mode to use (optional)
+        temperatures: Temperature configuration dictionary (optional)
+        
+    Returns:
+        Tuple of (mode, cool_temp, heat_temp, thermostat_scenario, freeze_protection_status)
     """
-    # Fetch weather data
+    # Fetch weather data for the property location
     current_temperature, temperature_min, temperature_max = get_weather_forecast(location['latitude'], location['longitude'])
     current_temp = current_temperature
     min_temp = temperature_min
     max_temp = temperature_max
-    logger.info(f"Weather Temperatures: Current: {current_temp}, Low: {min_temp}, High: {max_temp}")
+    logger.info(f"Weather Temperatures: Current: {current_temp}°F, Low: {min_temp}°F, High: {max_temp}°F")
 
     # Get freeze protection configuration from thermostat
     freeze_protection = None
@@ -112,6 +168,6 @@ def get_thermostat_settings(thermostat, location, reservation=False, mode=None, 
 
     # Get thermostat scenario
     thermostat_scenario = get_thermostat_scenario(reservation)
-    logger.info(f"Thermostat Settings: Mode: {mode}, Cool: {cool_temp}, Heat: {heat_temp}, Scenario: {thermostat_scenario}")
+    logger.info(f"Thermostat Settings: Mode: {mode}, Cool: {cool_temp}°F, Heat: {heat_temp}°F, Scenario: {thermostat_scenario}")
 
     return mode, cool_temp, heat_temp, thermostat_scenario, freeze_protection_status
