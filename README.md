@@ -193,6 +193,16 @@ Violations:
 • 🔵 Cool setpoint 68°F is below threshold 70°F
 ```
 
+**Temperature Change Message Example:**
+```
+🌡️ Updated Thermostat 'Upstairs' at 'Boston - Main St'
+Current Temperature: 73°F
+Changes Made:
+• Mode: heat → cool
+• Cool: 78°F → 72°F
+• Heat: 72°F → 68°F
+```
+
 
 ## Azure Functions
 

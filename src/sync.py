@@ -395,6 +395,18 @@ def process_property_thermostats(
             ):
                 logger.info(f"Skipping thermostat {thermostat['name']} at {property_name} - frequency setting doesn't allow processing today")
                 continue
+            
+            # Validate temperature configuration if found
+            if temperature_config:
+                frequency = temperature_config.get('frequency', 'first_day')
+                logger.info(f"Processing thermostat {thermostat['name']} with frequency: {frequency}")
+                
+                # Log if alerts are configured
+                if temperature_config.get('alerts'):
+                    alerts_enabled = temperature_config['alerts'].get('enabled', True)
+                    logger.info(f"Temperature alerts {'enabled' if alerts_enabled else 'disabled'} for {thermostat['name']}")
+            else:
+                logger.warning(f"No temperature configuration found for mode '{mode}' in thermostat {thermostat['name']} at {property_name}")
 
         # Apply settings based on thermostat brand
         if thermostat['brand'] == WYZE:

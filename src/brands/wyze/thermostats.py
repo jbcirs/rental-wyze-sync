@@ -28,7 +28,7 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
     Returns:
         Tuple of (updates, errors) lists tracking successful and failed operations
     """
-    logger.info(f'Processing SmartThings {Device.THERMOSTAT.value} reservations.')
+    logger.info(f'Processing Wyze {Device.THERMOSTAT.value} reservations.')
     updates = []
     errors = []
     # Skip flags to track if individual operations can be skipped
@@ -121,9 +121,10 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
                 logger.info(f"Skipping, no update needed for {Device.THERMOSTAT.value} {thermostat_name} at {property_name}")
                 
             elif update_successful_mode and update_successful_temp and update_successful_fan and update_successful_scenario:
-                update_msg = f"Updated {Device.THERMOSTAT.value} {thermostat_name} at {property_name}"
+                update_msg = f"🌡️ Updated {Device.THERMOSTAT.value} '{thermostat_name}' at '{property_name}'"
+                update_msg += f"\nCurrent Temperature: {current_temperature}°F"
                 if status_changes:
-                    update_msg += ":\n• " + "\n• ".join(status_changes)
+                    update_msg += "\nChanges Made:\n• " + "\n• ".join(status_changes)
                 logger.info(update_msg)
                 updates.append(f"{Device.THERMOSTAT.value} {property_name} - {thermostat_name}")
                 # Send detailed status change to Slack
