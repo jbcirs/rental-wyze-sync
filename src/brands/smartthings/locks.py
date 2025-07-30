@@ -5,6 +5,7 @@ from slack_notify import send_slack_message
 from utilty import format_datetime
 from brands.smartthings.smartthings import *
 import utilty
+import time  # Import time module for sleep
 
 # Configuration
 VAULT_URL = os.environ["VAULT_URL"]
@@ -14,6 +15,9 @@ NON_PROD = os.environ.get('NON_PROD', 'false').lower() == 'true'
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 TIMEZONE = os.environ['TIMEZONE']
 ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
+SMARTTHINGS_API_DELAY_SECONDS = int(os.environ['SMARTTHINGS_API_DELAY_SECONDS'])
+LOCK_CODE_ADD_MAX_ATTEMPTS = int(os.environ['LOCK_CODE_ADD_MAX_ATTEMPTS'])
+LOCK_CODE_VERIFY_MAX_ATTEMPTS = int(os.environ['LOCK_CODE_VERIFY_MAX_ATTEMPTS'])
 
 def sync(lock_name, property_name, location, reservations, current_time):
     """
@@ -39,7 +43,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
     try:
         location_id = find_location_by_name(location)
         if location_id is None:
-            error_msg = f"Unable to fetch location ID for {lock_name} at {property_name}."
+            error_msg = f"Unable to fetch location ID for {Device.LOCK.value} '{lock_name}' at {property_name}."
             send_slack_message(error_msg)
             errors.append(error_msg)
             return deletions, updates, additions, errors
@@ -108,16 +112,55 @@ def sync(lock_name, property_name, location, reservations, current_time):
                 
             if checkin_time <= current_time < checkout_time:
                 if not find_user_id_by_name(lock, label):
-                    logger.info(f"ADD: {property_name}; label: {label}")
-                    if add_user_code(lock, label, phone_last4):
-                        additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
-                        # Send success notification to Slack
-                        success_msg = f"🔑 Added access code for {guest_first_name} at {property_name} (valid until {checkout_time.strftime('%Y-%m-%d %H:%M')})"
-                        send_slack_message(success_msg)
-                    else:
-                        error_msg = f"🔐 Failed to add {Device.LOCK.value} code for {lock_name}: {label}"
-                        errors.append(error_msg)
-                        send_slack_message(error_msg)
+                    logger.info(f"ADD: {property_name}; {Device.LOCK.value} label: {label}")
+                    
+                    # Try adding the code up to configured number of times
+                    for attempt in range(1, LOCK_CODE_ADD_MAX_ATTEMPTS + 1):
+                        logger.info(f"🔑 Attempt {attempt} of {LOCK_CODE_ADD_MAX_ATTEMPTS} to add {Device.LOCK.value} code for '{guest_first_name}' at '{property_name}'")
+                        
+                        if add_user_code(lock, label, phone_last4):
+                            # Try validating the code up to configured number of times
+                            code_verified = False
+                            for verify_attempt in range(1, LOCK_CODE_VERIFY_MAX_ATTEMPTS + 1):
+                                logger.info(f"🔍 Validation attempt {verify_attempt} of {LOCK_CODE_VERIFY_MAX_ATTEMPTS} for {Device.LOCK.value} code '{label}'")
+                                time.sleep(SMARTTHINGS_API_DELAY_SECONDS)
+                                
+                                if find_user_id_by_name(lock, label):
+                                    additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
+                                    success_msg = f"🔑 Added {Device.LOCK.value} code for {guest_first_name} at {property_name} (verified on attempt {verify_attempt})"
+                                    send_slack_message(success_msg)
+                                    code_verified = True
+                                    break
+                                logger.warning(f"⚠️ Verification attempt {verify_attempt} failed for '{label}'. Waiting before retry...")
+                            
+                            if code_verified:
+                                break
+                            elif verify_attempt == LOCK_CODE_VERIFY_MAX_ATTEMPTS:
+                                logger.error(f"❌ Failed to verify {Device.LOCK.value} code after {LOCK_CODE_VERIFY_MAX_ATTEMPTS} attempts for {lock_name}: {label}")
+                                if attempt == LOCK_CODE_ADD_MAX_ATTEMPTS:
+                                    error_msg = f"🔐 Failed to add and verify {Device.LOCK.value} code after {LOCK_CODE_ADD_MAX_ATTEMPTS} attempts for {lock_name}: {label}"
+                                    logger.error(error_msg)
+                                    send_slack_message(error_msg)
+                                    errors.append(error_msg)
+                                continue  # Try adding the code again if attempts remain
+                        
+                        else:
+                            error_msg = f"🔐 Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
+                            logger.error(error_msg)
+                            if attempt < LOCK_CODE_ADD_MAX_ATTEMPTS:
+                                logger.info(f"Waiting {SMARTTHINGS_API_DELAY_SECONDS} seconds before retry...")
+                                time.sleep(SMARTTHINGS_API_DELAY_SECONDS)
+                                continue
+                            
+                            send_slack_message(error_msg)
+                            errors.append(error_msg)
+                            break
+            
+            if attempt == 3 and not code_verified:
+                error_msg = f"❌ Failed to add and verify {Device.LOCK.value} code after all attempts for {lock_name}: {label}"
+                logger.error(error_msg)
+                send_slack_message(error_msg)
+                errors.append(error_msg)
 
         # Delete old guest codes
         guest_user_names = find_all_guest_user_names(lock)

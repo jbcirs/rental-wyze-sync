@@ -17,6 +17,8 @@ LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'tru
 TIMEZONE = os.environ['TIMEZONE']
 ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
+LOCK_CODE_ADD_MAX_ATTEMPTS = int(os.environ['LOCK_CODE_ADD_MAX_ATTEMPTS'])
+LOCK_CODE_VERIFY_MAX_ATTEMPTS = int(os.environ['LOCK_CODE_VERIFY_MAX_ATTEMPTS'])
 
 def sync(client, lock_name, property_name, reservations, current_time, timezone, delete_all_guest_codes=False):
     """
@@ -44,7 +46,7 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
         # Get the lock device from Wyze
         lock_info = get_device_by_name(client, lock_name)
         if lock_info is None:
-            error_msg = f"❓ Device Not Found: Unable to fetch lock info for '{lock_name}' at '{property_name}'. Please verify the lock exists and is connected."
+            error_msg = f"❓ Device Not Found: Unable to fetch {Device.LOCK.value} info for '{lock_name}' at '{property_name}'. Please verify the {Device.LOCK.value} exists and is connected."
             send_slack_message(error_msg)
             errors.append(error_msg)
             return deletions, updates, additions, errors
@@ -54,7 +56,7 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
         existing_codes = get_lock_codes(client, lock_mac)
 
         if existing_codes is None:
-            error_msg = f"🔒 Lock Code Error: Unable to fetch codes for '{lock_name}' at '{property_name}'. The lock may be offline or experiencing connectivity issues."
+            error_msg = f"🔒 {Device.LOCK.value} Code Error: Unable to fetch codes for '{lock_name}' at '{property_name}'. The {Device.LOCK.value} may be offline or experiencing connectivity issues."
             send_slack_message(error_msg)
             errors.append(error_msg)
             return deletions, updates, additions, errors
@@ -63,7 +65,7 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
         client._user_id = get_user_id_from_existing_codes(existing_codes, client._user_id)
 
         if client._user_id is None:
-            error_msg = f"🔑 Authentication Error: Unable to find user_id for '{lock_name}' at '{property_name}'. This may indicate an account permissions issue."
+            error_msg = f"🔑 Authentication Error: Unable to find user_id for {Device.LOCK.value} '{lock_name}' at '{property_name}'. This may indicate an account permissions issue."
             send_slack_message(error_msg)
             errors.append(error_msg)
             return deletions, updates, additions, errors
@@ -157,12 +159,51 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
                 code = find_code(existing_codes, label)
 
                 if not code:
-                    # Add new code if it doesn't exist
-                    logger.info(f"ADD: {property_name}; label: {label}")
-                    if add_lock_code(client, lock_mac, phone_last4, label, permission):
-                        additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
-                    else:
-                        errors.append(f"Adding {Device.LOCK.value} Code for {lock_name}: {label}")
+                    logger.info(f"ADD: {property_name}; {Device.LOCK.value} label: {label}")
+                    
+                    # Try adding the code up to configured number of times
+                    for attempt in range(1, LOCK_CODE_ADD_MAX_ATTEMPTS + 1):
+                        logger.info(f"🔑 Attempt {attempt} of {LOCK_CODE_ADD_MAX_ATTEMPTS} to add {Device.LOCK.value} code for '{guest_first_name}' at '{property_name}'")
+                        
+                        if add_lock_code(client, lock_mac, phone_last4, label, permission):
+                            # Try validating the code up to configured number of times
+                            code_verified = False
+                            for verify_attempt in range(1, LOCK_CODE_VERIFY_MAX_ATTEMPTS + 1):
+                                logger.info(f"🔍 Validation attempt {verify_attempt} of {LOCK_CODE_VERIFY_MAX_ATTEMPTS} for {Device.LOCK.value} code '{label}'")
+                                time.sleep(WYZE_API_DELAY_SECONDS)
+                                
+                                updated_codes = get_lock_codes(client, lock_mac)
+                                if find_code(updated_codes, label):
+                                    additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
+                                    success_msg = f"🔑 Added {Device.LOCK.value} code for {guest_first_name} at {property_name} (verified on attempt {verify_attempt})"
+                                    send_slack_message(success_msg)
+                                    code_verified = True
+                                    break
+                                logger.warning(f"⚠️ Verification attempt {verify_attempt} failed for '{label}'. Waiting before retry...")
+                            
+                            if code_verified:
+                                break
+                            elif verify_attempt == LOCK_CODE_VERIFY_MAX_ATTEMPTS:
+                                logger.error(f"❌ Failed to verify {Device.LOCK.value} code after {LOCK_CODE_VERIFY_MAX_ATTEMPTS} attempts for {lock_name}: {label}")
+                                if attempt == LOCK_CODE_ADD_MAX_ATTEMPTS:
+                                    error_msg = f"🔐 Failed to add and verify {Device.LOCK.value} code after {LOCK_CODE_ADD_MAX_ATTEMPTS} attempts for {lock_name}: {label}"
+                                    logger.error(error_msg)
+                                    send_slack_message(error_msg)
+                                    errors.append(error_msg)
+                                continue  # Try adding the code again if attempts remain
+                        
+                        else:
+                            error_msg = f"🔐 Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
+                            logger.error(error_msg)
+                            if attempt < LOCK_CODE_ADD_MAX_ATTEMPTS:
+                                logger.info(f"Waiting {WYZE_API_DELAY_SECONDS} seconds before retry...")
+                                time.sleep(WYZE_API_DELAY_SECONDS)
+                                continue
+                            
+                            send_slack_message(error_msg)
+                            errors.append(error_msg)
+                            break
+                
                 else:
                     # Handle timezone conversion for date comparison
                     begin_utc = code.permission.begin.replace(tzinfo=pytz.utc)
