@@ -19,9 +19,6 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
 
   app_settings = {
     "TIMEZONE" = var.timezone
-    "APPINSIGHTS_INSTRUMENTATIONKEY" = azurerm_application_insights.app_insights.instrumentation_key
-    "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
-    "ApplicationInsightsAgent_EXTENSION_VERSION" = "~2"
     FUNCTIONS_WORKER_RUNTIME = "python"
     "WEBSITE_RUN_FROM_PACKAGE" = "1"
     VAULT_URL = azurerm_key_vault.key_vault.vault_uri
@@ -38,7 +35,6 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
   }
 
   depends_on = [
-    azurerm_application_insights.app_insights,
     azurerm_service_plan.app_service_plan
   ]
 
