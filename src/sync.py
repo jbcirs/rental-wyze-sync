@@ -21,7 +21,7 @@ from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
 import brands.smartthings.thermostats as smartthings_thermostats
-from thermostat import get_thermostat_settings
+from thermostat import get_thermostat_settings, should_process_thermostat_for_frequency, check_temperature_alerts
 from azure.data.tables import TableServiceClient
 from utilty import format_datetime, filter_by_key, is_valid_hour
 from light import get_light_settings
@@ -341,6 +341,8 @@ def process_property_thermostats(
     for thermostat in thermostats:
         logger.info(f"Processing thermostat: {thermostat['brand']} - {thermostat['manufacture']} - {thermostat['name']}")
         has_reservation = False
+        reservation_start_date = None
+        temperature_config = None
 
         # Determine if there's an active reservation
         if reservations:
@@ -355,6 +357,10 @@ def process_property_thermostats(
                 if checkin_time.date() <= current_time.date() < checkout_time.date():
                     filtered_thermostat = filter_by_key(thermostat, "temperatures", When.RESERVATIONS_ONLY.value)
                     has_reservation = True
+                    reservation_start_date = checkin_time.date()
+                    
+                    # Find the specific temperature configuration for the current mode
+                    # We'll determine mode first, then find the matching config
                     break
                 else:
                     filtered_thermostat = filter_by_key(thermostat, "temperatures", When.NON_RESERVATIONS.value)
@@ -375,6 +381,21 @@ def process_property_thermostats(
             temperatures=filtered_thermostat['temperatures']
         )
 
+        # For reservation-only settings, check frequency and find the specific temperature config
+        if has_reservation and reservation_start_date:
+            # Find the temperature configuration that matches the determined mode
+            for temp_config in filtered_thermostat['temperatures']:
+                if temp_config.get('mode') == mode:
+                    temperature_config = temp_config
+                    break
+            
+            # Check if we should process based on frequency setting
+            if temperature_config and not should_process_thermostat_for_frequency(
+                temperature_config, reservation_start_date, current_time.date()
+            ):
+                logger.info(f"Skipping thermostat {thermostat['name']} at {property_name} - frequency setting doesn't allow processing today")
+                continue
+
         # Apply settings based on thermostat brand
         if thermostat['brand'] == WYZE:
             updates, errors = wyze_thermostats.sync(
@@ -392,6 +413,15 @@ def process_property_thermostats(
         # Handle freeze protection override
         if freeze_protection:
             updates.append(f"Freeze protection override for {property_name} - {thermostat['name']}")
+        
+        # Check temperature alerts for reservation-only configurations
+        if has_reservation and temperature_config and temperature_config.get('alerts'):
+            alerts_sent = check_temperature_alerts(
+                thermostat['name'], property_name, mode, cool_temp, heat_temp, temperature_config
+            )
+            if alerts_sent:
+                # Log that alerts were sent but don't add to updates since these are alerts, not changes
+                logger.info(f"Temperature alerts sent for {thermostat['name']} at {property_name}: {len(alerts_sent)} alerts")
         
         property_updates.extend(updates)
         property_errors.extend(errors)
