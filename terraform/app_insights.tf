@@ -8,4 +8,7 @@ resource "azurerm_application_insights" "app_insights" {
     App = var.app_name
     Environment = var.environment
   }
+  lifecycle {
+    create_before_destroy = true
+  }
 }
