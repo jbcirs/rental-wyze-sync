@@ -118,3 +118,18 @@ variable "openweathermap_key" {
   description    = "OpenWeather api key"
   type           = string
 }
+
+variable "smartthings_api_delay_seconds" {
+  description = "SmartThings API call delay"
+  type = number
+}
+
+variable "lock_code_add_max_attempts" {
+  description = "Max attempts to add a lock code"
+  type = number
+}
+
+variable "lock_code_verify_max_attempts" {
+  description = "Max attempts to verify a lock code"
+  type = number
+}

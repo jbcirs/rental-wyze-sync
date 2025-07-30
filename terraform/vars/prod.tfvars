@@ -11,6 +11,9 @@ test_property_name = "Paradise Cove Enchanted Oaks"
 
 
 wyze_api_delay_seconds = 10
+smartthings_api_delay_seconds = 3
+lock_code_add_max_attempts = 3
+lock_code_verify_max_attempts = 3
 
 timezone = "America/Chicago"
 

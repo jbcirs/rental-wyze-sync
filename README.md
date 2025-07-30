@@ -86,38 +86,121 @@ Run the `Deploy Prod` GitHub Action to deploy the Azure Functions and start runn
 
 Run `Cleanup Prod` to remove the deployment.
 
-### 9. Adding Properties and Locks to Azure Storage Table
 
-Each lock will need to be added to the Azure Storage Table called `properties`.
+### 9. Adding Properties, Locks, and Thermostats to Azure Storage Table
+
+Each device (lock, light, thermostat) should be added to the Azure Storage Table called `properties`.
 
 - PartitionKey: PMS property name
 - RowKey: PMS System
-- BrandSettings: Is a list of all settings need for a bran to run
-- Location: Gps coordinates need for sunset and sunrise times
+- BrandSettings: List of all settings needed for a brand to run
+- Location: GPS coordinates needed for sunset and sunrise times
 - Active: `true` or `false` flag
-- Locks: Is a list of locks by brand and lock name
-- Lights: A list of smarthings lights. You can set to start with sunrise/sunset and/or set a time. Can also be set to only during reservations.
-- Thermostats: Coming soon
+- Locks: List of locks by brand and lock name
+- Lights: List of SmartThings lights. You can set to start with sunrise/sunset and/or set a time. Can also be set to only during reservations.
+- Thermostats: List of thermostats with full configuration (see below)
 
-Example:
-Known Values
-- Hospitable Name: `Boston - Main St`
-- Wyze Lock Name: `Boston - Main St - FD`
-- Smrthings Location `Boston Main st`
-- Smrthings Lock Name: `Backdoor`
+#### Thermostat Configuration (with Frequency and Alerts)
 
-Table Object in JSON
+You can now control when thermostat changes are made during reservations using the `frequency` field, and configure Slack alerts for temperature setpoints using the `alerts` field.
+
+**Frequency Options:**
+- `"first_day"` (default): Only apply changes on the check-in day
+- `"daily"`: Apply changes every day during the reservation
+
+**Alert Options:**
+- `cool_below`: Alert if cooling setpoint is below this value
+- `cool_above`: Alert if cooling setpoint is above this value
+- `heat_below`: Alert if heating setpoint is below this value
+- `heat_above`: Alert if heating setpoint is above this value
+- `enabled`: Boolean to enable/disable alerts (default: true)
+- `slack_channel`: Optional custom Slack channel for alerts
+
+**Example Table Object in JSON:**
 ```json
 {
-    "PartitionKey": "Boston - Main St",
-    "RowKey": "Hospitable",
-    "Active": true,
-    "BrandSettings": [ { "brand":"smartthings", "location":"Boston Main St" } ],
-    "Lights": [{"brand": "smartthings", "name": "String Lights", "when":"reservations_only", "minutes_before_sunset": 30, "minutes_after_sunrise": 30, "start_time":  null, "stop_time": "23:00"}],
-    "Location": {"latitude":"42.3554334","longitude":"-71.060511"},
-    "Locks": [ { "brand": "wyze", "name": "Boston - Main St - FD" }, { "brand": "smartthings", "name": "Backdoor" } ],
-    "Thermostats": [{"brand": "smartthings", "manufacture":"ecobee", "name": "Up Stairs", "temperatures": [{"when": "reservations_only", "mode":"cool", "cool_temp": 72, "heat_temp": 68}], "rest_times": ["01:00","16:00"]}, {"brand": "smartthings", "manufacture":"ecobee", "name": "Up Stairs", "temperatures": [{"when": "non_reservations", "mode":"auto", "cool_temp": 74, "heat_temp": 68, "freeze_protection":{"freeze_temp":32,"heat_temp":60}}], "rest_times": ["01:00","06:00"] }]
+  "PartitionKey": "Boston - Main St",
+  "RowKey": "Hospitable",
+  "Active": true,
+  "BrandSettings": [ { "brand": "smartthings", "location": "Boston Main St" } ],
+  "Lights": [
+    {"brand": "smartthings", "name": "String Lights", "when": "reservations_only", "minutes_before_sunset": 30, "minutes_after_sunrise": 30, "start_time": null, "stop_time": "23:00"}
+  ],
+  "Location": {"latitude": "42.3554334", "longitude": "-71.060511"},
+  "Locks": [
+    { "brand": "wyze", "name": "Boston - Main St - FD" },
+    { "brand": "smartthings", "name": "Backdoor" }
+  ],
+  "Thermostats": [
+    {
+      "brand": "smartthings",
+      "manufacture": "ecobee",
+      "name": "Upstairs",
+      "temperatures": [
+        {
+          "when": "reservations_only",
+          "mode": "cool",
+          "cool_temp": 72,
+          "heat_temp": 68,
+          "frequency": "first_day",
+          "alerts": {
+            "cool_below": 70,
+            "cool_above": 78,
+            "heat_below": 65,
+            "heat_above": 75,
+            "enabled": true,
+            "slack_channel": "#thermostat-alerts"
+          }
+        },
+        {
+          "when": "reservations_only",
+          "mode": "heat",
+          "cool_temp": 78,
+          "heat_temp": 72,
+          "frequency": "daily",
+          "alerts": {
+            "cool_below": 75,
+            "cool_above": 82,
+            "heat_below": 68,
+            "heat_above": 75,
+            "enabled": true
+          }
+        },
+        {
+          "when": "non_reservations",
+          "mode": "cool",
+          "cool_temp": 85,
+          "heat_temp": 50,
+          "freeze_protection": {
+            "freeze_temp": 32,
+            "heat_temp": 70
+          }
+        }
+      ],
+      "rest_times": ["01:00", "16:00"]
+    }
+  ]
 }
+```
+
+**Alert Message Example:**
+```
+🌡️ Thermostat Alert - Boston - Main St
+Thermostat: Upstairs
+Current Mode: cool
+Current Settings: Cool 68°F, Heat 70°F
+Violations:
+• 🔵 Cool setpoint 68°F is below threshold 70°F
+```
+
+**Temperature Change Message Example:**
+```
+🌡️ Updated Thermostat 'Upstairs' at 'Boston - Main St'
+Current Temperature: 73°F
+Changes Made:
+• Mode: heat → cool
+• Cool: 78°F → 72°F
+• Heat: 72°F → 68°F
 ```
 
 

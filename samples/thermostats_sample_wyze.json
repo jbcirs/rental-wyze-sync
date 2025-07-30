@@ -1,0 +1,62 @@
+[
+  {
+    "brand": "wyze",
+    "manufacture": "wyze",
+    "name": "Main Floor Thermostat",
+    "temperatures": [
+      {
+        "when": "reservations_only",
+        "mode": "cool",
+        "cool_temp": 73,
+        "heat_temp": 69,
+        "frequency": "first_day",
+        "alerts": {
+          "cool_below": 71,
+          "cool_above": 78,
+          "heat_below": 66,
+          "heat_above": 76,
+          "enabled": true
+        }
+      },
+      {
+        "when": "reservations_only",
+        "mode": "heat",
+        "cool_temp": 77,
+        "heat_temp": 71,
+        "frequency": "daily",
+        "alerts": {
+          "cool_below": 74,
+          "cool_above": 82,
+          "heat_below": 68,
+          "heat_above": 74,
+          "enabled": true
+        }
+      },
+      {
+        "when": "reservations_only",
+        "mode": "auto",
+        "cool_temp": 75,
+        "heat_temp": 71,
+        "frequency": "daily",
+        "alerts": {
+          "cool_below": 73,
+          "cool_above": 79,
+          "heat_below": 68,
+          "heat_above": 77,
+          "enabled": false
+        }
+      },
+      {
+        "when": "non_reservations",
+        "mode": "auto",
+        "cool_temp": 82,
+        "heat_temp": 55,
+        "freeze_protection": {
+          "freeze_temp": 35,
+          "heat_temp": 68
+        }
+      }
+    ],
+    "rest_times": ["02:00", "07:00"]
+  }
+]

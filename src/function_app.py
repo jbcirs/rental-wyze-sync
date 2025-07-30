@@ -1,6 +1,8 @@
 import logging
 import os
 import json
+import time
+from datetime import datetime
 from devices import Devices
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
@@ -10,7 +12,10 @@ from slack_bolt.adapter.fastapi import SlackRequestHandler
 
 app = func.FunctionApp()
 
-NON_PROD =  os.environ.get('NON_PROD', 'false').lower() == 'true'
+# Initialize execution tracking dict
+last_execution = {}
+
+NON_PROD = os.environ.get('NON_PROD', 'false').lower() == 'true'
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 VAULT_URL = os.environ["VAULT_URL"]
 
@@ -28,6 +33,20 @@ else:
 if not NON_PROD:
     @app.schedule(schedule="0 */30 * * * *", arg_name="mytimer", run_on_startup=False, use_monitor=True)
     def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
+        global last_execution
+        
+        # Implement a simple lock mechanism to prevent concurrent executions
+        current_time = time.time()
+        function_name = "timer_trigger_sync"
+        
+        # If the function was called in the last 5 minutes, skip execution
+        if function_name in last_execution and current_time - last_execution[function_name] < 300:
+            logging.info(f'Skipping execution - previous run too recent: {datetime.fromtimestamp(last_execution[function_name])}')
+            return
+            
+        # Set the last execution time
+        last_execution[function_name] = current_time
+        
         logging.info('Python timer trigger function executed at %s', mytimer)
 
         try:
@@ -39,7 +58,7 @@ if not NON_PROD:
 
 @app.function_name(name="Sync_Locks")
 @app.route(route="trigger_sync_locks", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
-def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
+def http_trigger_sync_locks(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
     logging.info(f"req.params: {req.params}")
@@ -65,7 +84,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     
 @app.function_name(name="Sync_Lights")
 @app.route(route="trigger_sync_lights", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
-def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
+def http_trigger_sync_lights(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
     try:
@@ -78,7 +97,7 @@ def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
     
 @app.function_name(name="Sync_Thermostats")
 @app.route(route="trigger_sync_thermostats", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
-def http_trigger_sync(req: func.HttpRequest) -> func.HttpResponse:
+def http_trigger_sync_thermostats(req: func.HttpRequest) -> func.HttpResponse:
     logging.info('HTTP trigger function processed a request.')
 
     try:
@@ -120,4 +139,4 @@ def property_list(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
-    
+

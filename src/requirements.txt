@@ -1,14 +1,13 @@
-# Do not include azure-functions-worker as it may conflict with the Azure Functions platform
-
-azure-functions
+azure-functions==1.23.0
 requests==2.32.3
 wyze-sdk==2.2.0
-slack_sdk==3.27.2
-azure-identity==1.16.0
-azure-keyvault-secrets==4.8.0
+slack_sdk==3.28.0
+azure-identity==1.23.0
+azure-keyvault-secrets==4.9.0
 cffi
 azure-data-tables==12.5.0
 pytz==2024.2
-slack-bolt==1.19.0
-fastapi==0.111.0
+slack-bolt==1.20.0
+fastapi==0.112.1
 json-log-formatter==1.0
+cryptography==45.0.2
