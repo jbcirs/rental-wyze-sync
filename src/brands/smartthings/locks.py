@@ -113,18 +113,17 @@ def sync(lock_name, property_name, location, reservations, current_time):
             if checkin_time <= current_time < checkout_time:
                 if not find_user_id_by_name(lock, label):
                     logger.info(f"ADD: {property_name}; {Device.LOCK.value} label: {label}")
-                    
+                    # Ensure code_verified is always defined
+                    code_verified = False
                     # Try adding the code up to configured number of times
                     for attempt in range(1, LOCK_CODE_ADD_MAX_ATTEMPTS + 1):
                         logger.info(f"🔑 Attempt {attempt} of {LOCK_CODE_ADD_MAX_ATTEMPTS} to add {Device.LOCK.value} code for '{guest_first_name}' at '{property_name}'")
-                        
                         if add_user_code(lock, label, phone_last4):
                             # Try validating the code up to configured number of times
                             code_verified = False
                             for verify_attempt in range(1, LOCK_CODE_VERIFY_MAX_ATTEMPTS + 1):
                                 logger.info(f"🔍 Validation attempt {verify_attempt} of {LOCK_CODE_VERIFY_MAX_ATTEMPTS} for {Device.LOCK.value} code '{label}'")
                                 time.sleep(SMARTTHINGS_API_DELAY_SECONDS)
-                                
                                 if find_user_id_by_name(lock, label):
                                     additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
                                     success_msg = f"🔑 Added {Device.LOCK.value} code for {guest_first_name} at {property_name} (verified on attempt {verify_attempt})"
@@ -132,7 +131,6 @@ def sync(lock_name, property_name, location, reservations, current_time):
                                     code_verified = True
                                     break
                                 logger.warning(f"⚠️ Verification attempt {verify_attempt} failed for '{label}'. Waiting before retry...")
-                            
                             if code_verified:
                                 break
                             elif verify_attempt == LOCK_CODE_VERIFY_MAX_ATTEMPTS:
@@ -143,7 +141,6 @@ def sync(lock_name, property_name, location, reservations, current_time):
                                     send_slack_message(error_msg)
                                     errors.append(error_msg)
                                 continue  # Try adding the code again if attempts remain
-                        
                         else:
                             error_msg = f"🔐 Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
                             logger.error(error_msg)
@@ -151,16 +148,15 @@ def sync(lock_name, property_name, location, reservations, current_time):
                                 logger.info(f"Waiting {SMARTTHINGS_API_DELAY_SECONDS} seconds before retry...")
                                 time.sleep(SMARTTHINGS_API_DELAY_SECONDS)
                                 continue
-                            
                             send_slack_message(error_msg)
                             errors.append(error_msg)
                             break
-            
-            if attempt == LOCK_CODE_ADD_MAX_ATTEMPTS and not code_verified:
-                error_msg = f"❌ Failed to add and verify {Device.LOCK.value} code after all attempts for {lock_name}: {label}"
-                logger.error(error_msg)
-                send_slack_message(error_msg)
-                errors.append(error_msg)
+                    # After all attempts, if code was never verified, log error
+                    if not code_verified:
+                        error_msg = f"❌ Failed to add and verify {Device.LOCK.value} code after all attempts for {lock_name}: {label}"
+                        logger.error(error_msg)
+                        send_slack_message(error_msg)
+                        errors.append(error_msg)
 
         # Delete old guest codes
         guest_user_names = find_all_guest_user_names(lock)
