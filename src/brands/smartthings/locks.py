@@ -156,7 +156,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
                             errors.append(error_msg)
                             break
             
-            if attempt == 3 and not code_verified:
+            if attempt == LOCK_CODE_ADD_MAX_ATTEMPTS and not code_verified:
                 error_msg = f"❌ Failed to add and verify {Device.LOCK.value} code after all attempts for {lock_name}: {label}"
                 logger.error(error_msg)
                 send_slack_message(error_msg)
