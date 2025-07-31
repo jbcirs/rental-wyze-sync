@@ -28,7 +28,7 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
     try:
         # Validate input data
         if not thermostat or 'name' not in thermostat:
-            error_msg = f"🔍 Missing Data: Thermostat configuration is missing or invalid for '{property_name}'."
+            error_msg = f"🔍 Missing Data: Thermostat configuration is missing or invalid for `{property_name}`."
             logger.error(error_msg)
             errors.append(error_msg)
             send_slack_message(error_msg)
@@ -38,7 +38,7 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
         location_id = find_location_by_name(location)
 
         if location_id is None:
-            error_msg = f"❓ Location Not Found: Unable to fetch location ID for '{location}' when configuring thermostat at '{property_name}'."
+            error_msg = f"❓ Location Not Found: Unable to fetch location ID for `{location}` when configuring thermostat at `{property_name}`."
             send_slack_message(error_msg)
             errors.append(error_msg)
             return updates, errors
@@ -46,16 +46,17 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
         thermostat_id = get_device_id_by_label(location_id, thermostat_name)
 
         if thermostat_id is None:
-            error_msg = f"❓ Device Not Found: Unable to fetch {Device.THERMOSTAT.value} '{thermostat_name}' at '{property_name}'. Please verify the device is online and correctly named."
+            error_msg = f"❓ Device Not Found: Unable to fetch {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`. Please verify the device is online and correctly named."
             send_slack_message(error_msg)
             errors.append(error_msg)
             return updates, errors
 
         # Check if thermostat needs updating by comparing current and desired settings
+        # Using refresh to ensure we get the latest data from the physical thermostat (e.g., Ecobee)
         status_result = thermostat_needs_updating(thermostat_id, mode, cool_temp, heat_temp)
         
         if status_result is None:
-            error_msg = f"🌡️ Thermostat Status Error: Unable to retrieve current status for '{thermostat_name}' at '{property_name}'. The device may be offline or experiencing connectivity issues."
+            error_msg = f"🌡️ Thermostat Status Error: Unable to retrieve current status for `{thermostat_name}` at `{property_name}`. The device may be offline or experiencing connectivity issues."
             logger.error(error_msg)
             errors.append(error_msg)
             send_slack_message(error_msg)
@@ -88,7 +89,7 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
             update_successful, api_status_changes = set_thermostat(thermostat_id, thermostat_name, mode, cool_temp, heat_temp)
             
             if update_successful:
-                update_msg = f"🌡️ Updated {Device.THERMOSTAT.value} '{thermostat_name}' at '{property_name}'"
+                update_msg = f"🌡️ Updated {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`"
                 update_msg += f"\nCurrent Temperature: {current_temperature}°F"
                 if status_changes:
                     update_msg += "\nChanges Made:\n• " + "\n• ".join(status_changes)
@@ -97,7 +98,7 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
                 # Send detailed status change to Slack
                 send_slack_message(update_msg)
             else:
-                error_msg = f"⚠️ Failed to update {Device.THERMOSTAT.value} '{thermostat_name}' at '{property_name}'"
+                error_msg = f"⚠️ Failed to update {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`"
                 logger.error(error_msg)
                 errors.append(f"Updating {Device.THERMOSTAT.value} for {thermostat_name} at {property_name}")
                 send_slack_message(error_msg)
@@ -105,7 +106,7 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
             logger.info(f"No update needed for {Device.THERMOSTAT.value} {thermostat_name} at {property_name}")
 
     except Exception as e:
-        error_msg = f"❌ Unexpected Error in SmartThings {Device.THERMOSTAT.value} function for '{property_name}': {str(e)}"
+        error_msg = f"❌ Unexpected Error in SmartThings {Device.THERMOSTAT.value} function for `{property_name}`: {str(e)}"
         logger.error(error_msg)
         errors.append(error_msg)
         send_slack_message(error_msg)
@@ -115,6 +116,7 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
 def thermostat_needs_updating(thermostat_id, mode, cool_temp, heat_temp, fan_mode="auto"):
     """
     Check if thermostat settings need to be updated by comparing current and desired states.
+    Forces a refresh to ensure we get the latest data from the physical device.
     
     Args:
         thermostat_id: ID of the thermostat device
@@ -128,7 +130,8 @@ def thermostat_needs_updating(thermostat_id, mode, cool_temp, heat_temp, fan_mod
         or None if there was an error retrieving the status
     """
     try:
-        status = get_device_status(thermostat_id)
+        # Force refresh to get latest data from the physical thermostat (e.g., Ecobee)
+        status = get_device_status_with_refresh(thermostat_id, force_refresh=True)
         if not status:
             logger.error(f"🌡️ Thermostat Status Error: Failed to get status for device {thermostat_id}.")
             return None

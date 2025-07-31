@@ -8,6 +8,7 @@ from azure.keyvault.secrets import SecretClient
 
 VAULT_URL = os.environ["VAULT_URL"]
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
+SMARTTHINGS_API_DELAY_SECONDS = int(os.environ.get('SMARTTHINGS_API_DELAY_SECONDS', '2'))
 
 logger = Logger()
 
@@ -191,18 +192,73 @@ def get_device_status(device_id):
         return None
 
 def refresh_device_status(device_id):
+    """
+    Force a refresh of device status from the physical device to SmartThings cloud.
+    This ensures the latest data is available when querying device status.
+    
+    Args:
+        device_id: ID of the device to refresh
+        
+    Returns:
+        bool: True if refresh command was successful, False otherwise
+    """
+    if not device_id:
+        logger.error("🔍 Missing device_id in refresh_device_status call.")
+        return False
+        
     url = f"{BASE_URL}/devices/{device_id}/commands"
+
     payload = {
         "commands": [
             {
-            "component": "main",
-            "capability": "refresh",
-            "command": "refresh"
+                "component": "main",
+                "capability": "refresh",
+                "command": "refresh"
             }
         ]
     }
 
-    return send_command(url, payload)
+    try:
+        response = requests.post(url, headers=HEADERS, json=payload)
+        if response.status_code == 200:
+            logger.info(f"🔄 Successfully sent refresh command to device {device_id}")
+            return True
+        else:
+            logger.warning(f"⚠️ Failed to send refresh command to device {device_id}. Status code: {response.status_code}")
+            logger.warning(f"Response: {response.text}")
+            return False
+    except Exception as e:
+        logger.error(f"❌ Error refreshing device {device_id}: {str(e)}")
+        return False
+
+def get_device_status_with_refresh(device_id, force_refresh=True):
+    """
+    Get device status with optional forced refresh to ensure latest data.
+    
+    Args:
+        device_id: ID of the device
+        force_refresh: Whether to force a refresh before getting status (default: True)
+        
+    Returns:
+        Device status JSON or None if failed
+    """
+    if not device_id:
+        logger.error("🔍 Missing device_id in get_device_status_with_refresh call.")
+        return None
+    
+    if force_refresh:
+        logger.info(f"🔄 Refreshing device {device_id} to get latest status...")
+        refresh_success = refresh_device_status(device_id)
+        
+        if refresh_success:
+            # Wait for the device to update its status after refresh
+            logger.info(f"⏱️ Waiting {SMARTTHINGS_API_DELAY_SECONDS} seconds for device status to update...")
+            time.sleep(SMARTTHINGS_API_DELAY_SECONDS)
+        else:
+            logger.warning(f"⚠️ Refresh failed for device {device_id}, proceeding with cached status")
+    
+    # Get the current status
+    return get_device_status(device_id)
 
 def switch(device_id, state=True):
     if device_id is None:
@@ -260,8 +316,8 @@ def set_thermostat(device_id, device_name, mode, cool_temp=None, heat_temp=None,
     url = f"{BASE_URL}/devices/{device_id}/commands"
     commands = []
     
-    # Track original settings for logging
-    original_settings = get_device_status(device_id)
+    # Track original settings for logging - refresh to get latest data
+    original_settings = get_device_status_with_refresh(device_id, force_refresh=True)
     if original_settings:
         try:
             original_mode = original_settings['components']['main']['thermostatMode']['thermostatMode']['value']
@@ -343,7 +399,8 @@ def get_locks_with_users(devices):
     locks_with_users = []
     for device in devices:
         device_id = device['deviceId']
-        device_status = get_device_status(device_id)
+        # Force refresh to get latest lock codes from the physical device
+        device_status = get_device_status_with_refresh(device_id, force_refresh=True)
         lock_codes_json = device_status.get('components', {}).get('main', {}).get('lockCodes', {}).get('lockCodes', {}).get('value', "{}")
         lock_codes = json.loads(lock_codes_json)
         locks_with_users.append({
@@ -458,6 +515,40 @@ def get_locks(location_id):
 
 def find_lock_by_name(locks_with_users, lock_name):
     return next((lock for lock in locks_with_users if lock['lock_name'].lower() == lock_name.lower()), None)
+
+def refresh_lock_data(location_id, lock_name):
+    """
+    Refresh lock data by re-fetching from SmartThings with forced device refresh.
+    This ensures we get the latest lock codes after adding/deleting them.
+    
+    Args:
+        location_id: SmartThings location ID
+        lock_name: Name of the lock to refresh
+        
+    Returns:
+        Updated lock dictionary with latest codes, or None if error
+    """
+    try:
+        logger.info(f"🔄 Refreshing lock data for '{lock_name}' to get latest codes...")
+        
+        # Get fresh lock data with refresh
+        locks_with_users = get_locks(location_id)
+        if not locks_with_users:
+            logger.error(f"❌ Failed to get refreshed locks data for location {location_id}")
+            return None
+            
+        # Find the specific lock
+        lock = find_lock_by_name(locks_with_users, lock_name)
+        if not lock:
+            logger.error(f"❌ Lock '{lock_name}' not found after refresh")
+            return None
+            
+        logger.info(f"✅ Successfully refreshed lock data for '{lock_name}'")
+        return lock
+        
+    except Exception as e:
+        logger.error(f"❌ Error refreshing lock data for '{lock_name}': {str(e)}")
+        return None
 
 # Debugging Use
 def print_locks_with_users(locks_with_users):
