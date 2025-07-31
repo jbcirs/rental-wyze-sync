@@ -1,1 +1,0 @@
-# Application Insights removed to avoid workspace_id dependency issues
