@@ -9,6 +9,12 @@ resource "azurerm_application_insights" "app_insights" {
     App         = var.app_name
     Environment = var.environment
   }
+
+  lifecycle {
+    ignore_changes = [
+      workspace_id  # Ignore changes to workspace_id since it can't be removed once set
+    ]
+  }
 }
 
 # Output the instrumentation key and connection string for use in other resources
