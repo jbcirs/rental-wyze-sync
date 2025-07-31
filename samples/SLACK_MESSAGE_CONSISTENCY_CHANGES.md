@@ -42,6 +42,7 @@ The SmartThings and Wyze thermostat implementations had inconsistent Slack messa
 - No changes needed - already had comprehensive implementation
 - Wyze implementation was used as the standard to match
 
+
 ### Result
 
 Both SmartThings and Wyze thermostats now send identical message formats:
@@ -53,6 +54,14 @@ Changes Made:
 • Setting: old_value → new_value
 • Setting: old_value → new_value
 ```
+
+**Lock code Slack messages now include the lock name for clarity:**
+
+```
+:key: Added Lock code for John at Paradise Cove Enchanted Oaks on Master Bath Closet Door Lock (verified on attempt 2)
+```
+
+**SmartThings lock refreshes are now minimized to avoid API throttling and errors.**
 
 ### Benefits
 

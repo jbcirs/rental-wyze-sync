@@ -120,6 +120,13 @@ The following environment variables can be configured in your Terraform variable
 - `LOCK_CODE_VERIFY_MAX_ATTEMPTS`: Maximum attempts to verify a lock code (default: 3)
 - `LIGHT_VERIFY_MAX_ATTEMPTS`: Maximum attempts to verify light state changes (default: 3)
 
+**Recent Change:**
+- SmartThings lock code refreshes are now minimized to avoid API throttling and errors. Lock status is retrieved without forcing a refresh except when absolutely necessary.
+
+**Slack Message Format Update:**
+- All lock code Slack messages now include the lock name for clarity. Example:
+  `:key: Added Lock code for John at Paradise Cove Enchanted Oaks on Master Bath Closet Door Lock (verified on attempt 2)`
+
 **Time and Location Settings:**
 - `TIMEZONE`: Timezone for time calculations (e.g., "America/Chicago")
 - `CHECK_IN_OFFSET_HOURS`: Hours to offset check-in time (default: -1)

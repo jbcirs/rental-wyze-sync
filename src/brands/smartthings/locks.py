@@ -130,7 +130,7 @@ def sync(lock_name, property_name, location, reservations, current_time):
                                 refreshed_lock = refresh_lock_data(location_id, lock_name)
                                 if refreshed_lock and find_user_id_by_name(refreshed_lock, label):
                                     additions.append(f"{Device.LOCK.value} - {lock_name}: {label}")
-                                    success_msg = f"🔑 Added {Device.LOCK.value} code for `{guest_first_name}` at `{property_name}` (verified on attempt {verify_attempt})"
+                                    success_msg = f"🔑 Added {Device.LOCK.value} code for `{guest_first_name}` at `{property_name}` on `{lock_name}` (verified on attempt {verify_attempt})"
                                     send_slack_message(success_msg)
                                     code_verified = True
                                     # Update the lock object with refreshed data for subsequent operations
