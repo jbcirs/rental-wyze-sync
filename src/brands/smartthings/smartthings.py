@@ -399,8 +399,8 @@ def get_locks_with_users(devices):
     locks_with_users = []
     for device in devices:
         device_id = device['deviceId']
-        # Force refresh to get latest lock codes from the physical device
-        device_status = get_device_status_with_refresh(device_id, force_refresh=True)
+        # Do NOT force refresh to avoid excessive SmartThings API calls
+        device_status = get_device_status_with_refresh(device_id, force_refresh=False)
         lock_codes_json = device_status.get('components', {}).get('main', {}).get('lockCodes', {}).get('lockCodes', {}).get('value', "{}")
         lock_codes = json.loads(lock_codes_json)
         locks_with_users.append({
