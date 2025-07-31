@@ -9,6 +9,17 @@ resource "azurerm_application_insights" "app_insights" {
     Environment = var.environment
   }
   lifecycle {
-    create_before_destroy = true
+    replace_triggered_by = [
+      # Force replacement if we need to remove workspace_id
+      null_resource.app_insights_reset.id
+    ]
+  }
+}
+
+# This resource forces Application Insights to be recreated
+resource "null_resource" "app_insights_reset" {
+  triggers = {
+    # Change this value to force recreation
+    reset = "remove_workspace_id_v1"
   }
 }
