@@ -15,6 +15,8 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     application_stack {
       python_version = "3.9"
     }
+    application_insights_connection_string = azurerm_application_insights.app_insights.connection_string
+    application_insights_key = azurerm_application_insights.app_insights.instrumentation_key
   }
 
   app_settings = {

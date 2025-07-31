@@ -48,22 +48,44 @@ last_execution = {}
 
 NON_PROD = os.environ.get('NON_PROD', 'false').lower() == 'true'
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
+
+# Log startup information
+logging.info(f"Function App starting up - NON_PROD: {NON_PROD}, LOCAL_DEVELOPMENT: {LOCAL_DEVELOPMENT}")
+logging.info(f"Python version: {os.sys.version}")
+try:
+    logging.info(f"Azure Functions version: {func.__version__}")
+except AttributeError:
+    logging.info("Azure Functions version: unknown")
+
 VAULT_URL = os.environ["VAULT_URL"]
 
 if LOCAL_DEVELOPMENT:
     SLACK_SIGNING_SECRET = os.environ['SLACK_SIGNING_SECRET']
+    SLACK_TOKEN = os.environ.get('SLACK_TOKEN', '')
 else:
     # Azure Key Vault client
-    credential = DefaultAzureCredential()
-    client = SecretClient(vault_url=VAULT_URL, credential=credential)
+    try:
+        credential = DefaultAzureCredential()
+        client = SecretClient(vault_url=VAULT_URL, credential=credential)
 
-    # Fetch secrets from Key Vault
-    SLACK_SIGNING_SECRET = client.get_secret("SLACK-SIGNING-SECRET").value
-    SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
+        # Fetch secrets from Key Vault
+        SLACK_SIGNING_SECRET = client.get_secret("SLACK-SIGNING-SECRET").value
+        SLACK_TOKEN = client.get_secret("SLACK-TOKEN").value
+        logging.info("Successfully retrieved secrets from Key Vault")
+    except Exception as e:
+        logging.error(f"Failed to retrieve secrets from Key Vault: {str(e)}")
+        # Set defaults to prevent app startup failure
+        SLACK_SIGNING_SECRET = ""
+        SLACK_TOKEN = ""
 
-@app.schedule(schedule="0 */30 * * * *", arg_name="mytimer", run_on_startup=False, use_monitor=True)
+@app.function_name(name="TimerTriggerSync")
+@app.schedule(schedule="0 */10 * * * *", arg_name="mytimer", run_on_startup=False, use_monitor=True)
 def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
     global last_execution
+    
+    # Log timer trigger details for debugging
+    logging.info(f'Timer trigger fired - Schedule info: {mytimer.schedule_status}')
+    logging.info(f'Timer trigger - Past due: {mytimer.past_due}')
     
     # Only run scheduled timer in production environments
     if NON_PROD:
@@ -83,8 +105,8 @@ def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
     current_time = time.time()
     function_name = "timer_trigger_sync"
     
-    # If the function was called in the last 25 minutes, skip execution (adjusted for 30-min schedule)
-    if function_name in last_execution and current_time - last_execution[function_name] < 1500:  # 25 minutes
+    # If the function was called in the last 8 minutes, skip execution (adjusted for 10-min schedule)
+    if function_name in last_execution and current_time - last_execution[function_name] < 480:  # 8 minutes
         time_since_last = current_time - last_execution[function_name]
         logging.info(f'Skipping execution - previous run too recent: {datetime.fromtimestamp(last_execution[function_name])} ({time_since_last/60:.1f} minutes ago)')
         if telemetry_client:
@@ -241,4 +263,39 @@ def property_list(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+
+@app.function_name(name="HealthCheck")
+@app.route(route="health", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.ANONYMOUS)
+def health_check(req: func.HttpRequest) -> func.HttpResponse:
+    """Simple health check endpoint to verify function app is working"""
+    logging.info('Health check requested')
+    
+    health_info = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "environment": {
+            "NON_PROD": NON_PROD,
+            "LOCAL_DEVELOPMENT": LOCAL_DEVELOPMENT,
+            "python_version": os.sys.version,
+        },
+        "functions": [
+            "TimerTriggerSync",
+            "Sync_Locks", 
+            "Sync_Lights",
+            "Sync_Thermostats",
+            "Property_List"
+        ]
+    }
+    
+    if telemetry_client:
+        telemetry_client.track_event('HealthCheck_Requested')
+        health_info["application_insights"] = "configured"
+    else:
+        health_info["application_insights"] = "not_configured"
+    
+    return func.HttpResponse(
+        json.dumps(health_info, indent=2),
+        mimetype="application/json",
+        status_code=200
+    )
 
