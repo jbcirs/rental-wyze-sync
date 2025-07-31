@@ -1,7 +1,16 @@
+# Syncing Rental Wyze De- Freeze protection and energy-saving modes
 
-# Syncing Rental Wyze Devices
+### 📊 **Application Insights Integration**
 
-This app will synchronize Wyze devices for rental use. This Azure Function looks one week in advance from your Hospitable calendar and adds, updates, or deletes codes into Wyze or SmartThings locks.
+- Comprehensive telemetry tracking for all function executions
+- Custom metrics for execution times and performance monitoring
+- Exception tracking with detailed error analysis
+- Event tracking for function starts, completions, and failures
+- Dashboard-ready metrics for operational insights
+
+### 📱 **Enhanced Slack Integration**
+
+- Consistent notification format across all device typesis app will synchronize Wyze devices for rental use. This Azure Function looks one week in advance from your Hospitable calendar and adds, updates, or deletes codes into Wyze or SmartThings locks.
 
 ## Key Features
 
@@ -25,7 +34,14 @@ This app will synchronize Wyze devices for rental use. This Azure Function looks
 - Support for both SmartThings and Wyze thermostats
 - Freeze protection and energy-saving modes
 
-### 📱 **Enhanced Slack Integration**
+### � **Application Insights Integration**
+- Comprehensive telemetry tracking for all function executions
+- Custom metrics for execution times and performance monitoring
+- Exception tracking with detailed error analysis
+- Event tracking for function starts, completions, and failures
+- Dashboard-ready metrics for operational insights
+
+### �📱 **Enhanced Slack Integration**
 - Consistent notification format across all device types
 - Before/after state tracking for all changes
 - Retry attempt reporting for transparency
@@ -136,11 +152,52 @@ The following environment variables can be configured in your Terraform variable
 - `SLACK_CHANNEL`: Slack channel for notifications (e.g., "#rentals")
 - `ALWAYS_SEND_SLACK_SUMMARY`: Always send summary messages (default: false)
 
+**Timer and Environment Settings:**
+- `NON_PROD`: Set to true for non-production environments (default: false)
+- `LOCAL_DEVELOPMENT`: Set to true for local development (default: false)
+
+> **Note**: The scheduled timer function runs every 30 minutes **only in production environments** (`NON_PROD=false`). In non-production environments, the timer is completely disabled to prevent accidental executions. Use the HTTP trigger endpoints for manual testing in non-production.
+
 ### 7. Deploy the Azure Functions
 
 Run the `Deploy Prod` GitHub Action to deploy the Azure Functions and start running them.
 
-### 8. Cleanup Deployment
+### 8. Monitor with Application Insights
+
+Your deployment now includes Azure Application Insights for comprehensive monitoring:
+
+**Available Metrics and Insights:**
+- **Function Execution Times**: Track how long each sync operation takes
+- **Error Tracking**: Automatic exception capture with stack traces
+- **Custom Events**: Function start/completion/failure events with context
+- **Performance Metrics**: Execution time trends and performance analysis
+- **Live Metrics**: Real-time function execution monitoring
+- **Dependency Tracking**: Monitor calls to external APIs (Wyze, SmartThings, Slack)
+
+**Access Application Insights:**
+1. Navigate to your Azure resource group in the Azure portal
+2. Open the Application Insights resource named `{app_name}-appinsights`
+3. Use the **Logs** section to query custom telemetry data
+4. Check **Live Metrics** for real-time monitoring
+5. Review **Failures** for exception details and stack traces
+
+**Example Queries:**
+```kusto
+// Function execution times over the last 24 hours
+customEvents
+| where timestamp > ago(24h)
+| where name contains "Completed"
+| extend ExecutionTime = todouble(customDimensions["execution_time_seconds"])
+| summarize avg(ExecutionTime), max(ExecutionTime), min(ExecutionTime) by name
+
+// Failed executions with error details
+customEvents
+| where timestamp > ago(7d)
+| where name contains "Failed"
+| project timestamp, name, customDimensions["error"]
+```
+
+### 9. Cleanup Deployment
 
 Run `Cleanup Prod` to remove the deployment.
 
@@ -334,6 +391,72 @@ You will get two Azure Functions:
 - **Code Name Formatting:** Occasionally, spaces in the names of the codes are removed.
 - **Name Display Issues:** Sometimes, names do not appear, but they are present if you check via the API.
 - **Synchronization Problems:** If something gets out of sync, you may need to delete all guest codes and re-sync.
+
+## Manual Azure Resource Purge Before Redeploy
+
+If you need to manually purge resources in Azure before redeploying, run the following Azure CLI commands:
+
+```sh
+az group delete --name "rental-sync" --yes --no-wait
+az keyvault purge --name rental-sync-keyvault
+```
+
+- The first command deletes the resource group and all resources within it.
+- The second command purges the soft-deleted Key Vault so it can be recreated immediately.
+
+> **Azure CLI Note:**
+> When running `az keyvault purge --name rental-sync-keyvault`, the command may appear to hang or run forever. This is a known Azure bug. After a couple of minutes, cancel the command, then re-run `az group delete --name "rental-sync" --yes --no-wait` to ensure the resource group is deleted. You may need to repeat this process until the Key Vault is fully purged and the group deletion succeeds.
+
+> **Note:** You must have sufficient permissions in Azure to run these commands. Purging is required if you see errors about existing or soft-deleted Key Vaults during redeployment.
+
+## Properties Import Tool
+
+For bulk importing property configurations into Azure Table Storage, use the properties import script located in `scripts/properties-import/import.py`.
+
+### Prerequisites
+
+Install required Python packages:
+```sh
+pip install pandas azure-data-tables
+```
+
+**For Key Vault URL usage:**
+- You must be logged in with `az login`
+- You must have permissions to read the Key Vault secret
+
+### Usage
+
+1. Create a `properties.csv` file in the `scripts/properties-import/` directory with your property data
+2. Get your Azure Storage Account connection string from the Azure portal OR use a Key Vault secret URL
+3. Run the import script:
+
+**Option 1: Direct connection string**
+```sh
+cd scripts/properties-import
+python import.py "DefaultEndpointsProtocol=https;AccountName=<your-account>;AccountKey=<your-key>;EndpointSuffix=core.windows.net"
+```
+
+**Option 2: Key Vault secret URL**
+```sh
+cd scripts/properties-import
+python import.py "https://<vault>.vault.azure.net/secrets/<secret-name>/<version>"
+```
+
+### CSV Format
+
+The CSV file should include at minimum:
+- `PartitionKey`: PMS property name
+- `RowKey`: PMS System (e.g., "Hospitable")
+
+Additional columns will be imported as entity properties. Complex JSON objects (like Locks, Lights, Thermostats) should be properly formatted JSON strings in the CSV.
+
+### Features
+
+- Creates the 'properties' table if it doesn't exist
+- Upserts entities (updates existing, creates new)
+- Progress reporting every 10 uploads
+- Error handling for individual row failures
+- Validates connection string and file existence
 
 ### First Time Local
 

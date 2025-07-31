@@ -24,7 +24,7 @@ variable "check_out_offset_hours" {
 }
 
 variable "non_prod" {
-  description = "Non Prod"
+  description = "Non Prod - when true, disables scheduled timer execution"
   type = bool
 }
 

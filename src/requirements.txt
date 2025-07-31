@@ -11,3 +11,5 @@ slack-bolt==1.20.0
 fastapi==0.112.1
 json-log-formatter==1.0
 cryptography==43.0.3
+opencensus-ext-azure==1.1.13
+applicationinsights==0.11.10

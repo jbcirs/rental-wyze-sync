@@ -34,6 +34,8 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     STORAGE_ACCOUNT_NAME = azurerm_storage_account.storage.name
     ALWAYS_SEND_SLACK_SUMMARY = var.always_send_slack_summary
     SMARTTHINGS_TOKEN = var.smartthings_token
+    APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.app_insights.instrumentation_key
+    APPLICATIONINSIGHTS_CONNECTION_STRING = azurerm_application_insights.app_insights.connection_string
   }
 
   depends_on = [
