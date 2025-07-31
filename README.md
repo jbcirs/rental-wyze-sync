@@ -3,6 +3,35 @@
 
 This app will synchronize Wyze devices for rental use. This Azure Function looks one week in advance from your Hospitable calendar and adds, updates, or deletes codes into Wyze or SmartThings locks.
 
+## Key Features
+
+### 🔒 **Smart Lock Management**
+- Automatic guest code creation using last 4 digits of phone numbers
+- Retry logic with configurable attempts for reliable code deployment
+- Time-based code activation during reservation periods
+- Comprehensive error handling and Slack notifications
+
+### 💡 **Intelligent Light Control**
+- Sunrise/sunset automation with configurable offsets
+- Fixed time schedules with priority-based logic
+- Reservation-aware lighting (on during stays, off when vacant)
+- Retry verification for reliable state changes
+- Detailed before/after Slack notifications
+
+### 🌡️ **Advanced Thermostat Management**
+- Frequency control: "first_day" vs "daily" temperature changes
+- Temperature threshold alerts with customizable limits
+- Detailed before/after change tracking in Slack
+- Support for both SmartThings and Wyze thermostats
+- Freeze protection and energy-saving modes
+
+### 📱 **Enhanced Slack Integration**
+- Consistent notification format across all device types
+- Before/after state tracking for all changes
+- Retry attempt reporting for transparency
+- Error categorization with helpful emoji indicators
+- Customizable alert channels for different notification types
+
 ## Setup
 
 This code is set up with Terraform for infrastructure as code, using GitHub build workflows for deployment.
@@ -66,6 +95,7 @@ WYZE_KEY_ID
 WYZE_PASSWORD
 SLACK_SIGNING_SECRET
 SMARTTHINGS_TOKEN
+OPENWEATHERMAP_KEY
 ```
 
 - `AZURE_AD_CLIENT_ID` is the app_id from the JSON object in step 2.
@@ -77,6 +107,27 @@ SMARTTHINGS_TOKEN
 - `SLACK_TOKEN` will start with `xoxb-`
 - `SLACK_SIGNING_SECRET` this will be used to verify that requests come from Slack.
 - `SMARTTHINGS_TOKEN` this is the personal access token to your [SmartThings](https://account.smartthings.com/tokens) account.
+- `OPENWEATHERMAP_KEY` API key from [OpenWeatherMap](https://openweathermap.org/api) for weather data.
+
+### Environment Variables Configuration
+
+The following environment variables can be configured in your Terraform variables:
+
+**API Delays and Retry Settings:**
+- `WYZE_API_DELAY_SECONDS`: Delay between Wyze API calls (default: 10)
+- `SMARTTHINGS_API_DELAY_SECONDS`: Delay between SmartThings API calls (default: 3)
+- `LOCK_CODE_ADD_MAX_ATTEMPTS`: Maximum attempts to add a lock code (default: 3)
+- `LOCK_CODE_VERIFY_MAX_ATTEMPTS`: Maximum attempts to verify a lock code (default: 3)
+- `LIGHT_VERIFY_MAX_ATTEMPTS`: Maximum attempts to verify light state changes (default: 3)
+
+**Time and Location Settings:**
+- `TIMEZONE`: Timezone for time calculations (e.g., "America/Chicago")
+- `CHECK_IN_OFFSET_HOURS`: Hours to offset check-in time (default: -1)
+- `CHECK_OUT_OFFSET_HOURS`: Hours to offset check-out time (default: 1)
+
+**Notification Settings:**
+- `SLACK_CHANNEL`: Slack channel for notifications (e.g., "#rentals")
+- `ALWAYS_SEND_SLACK_SUMMARY`: Always send summary messages (default: false)
 
 ### 7. Deploy the Azure Functions
 
@@ -87,7 +138,7 @@ Run the `Deploy Prod` GitHub Action to deploy the Azure Functions and start runn
 Run `Cleanup Prod` to remove the deployment.
 
 
-### 9. Adding Properties, Locks, and Thermostats to Azure Storage Table
+### 9. Adding Properties, Locks, Lights, and Thermostats to Azure Storage Table
 
 Each device (lock, light, thermostat) should be added to the Azure Storage Table called `properties`.
 
@@ -97,8 +148,63 @@ Each device (lock, light, thermostat) should be added to the Azure Storage Table
 - Location: GPS coordinates needed for sunset and sunrise times
 - Active: `true` or `false` flag
 - Locks: List of locks by brand and lock name
-- Lights: List of SmartThings lights. You can set to start with sunrise/sunset and/or set a time. Can also be set to only during reservations.
+- Lights: List of SmartThings lights with time-based controls (see below)
 - Thermostats: List of thermostats with full configuration (see below)
+
+#### Light Configuration
+
+SmartThings lights can be controlled based on time schedules, sunrise/sunset calculations, and reservation status. The system includes retry logic and comprehensive Slack notifications.
+
+**Light Configuration Fields:**
+- `brand`: Always "smartthings" for SmartThings lights
+- `name`: The exact device name as it appears in SmartThings
+- `when`: When the light should operate
+  - `"reservations_only"`: Only during active reservations
+  - `"non_reservations"`: Only when property is vacant
+- `minutes_before_sunset`: Turn light ON X minutes before actual sunset (optional)
+- `minutes_after_sunrise`: Turn light OFF X minutes after actual sunrise (optional)
+- `start_time`: Fixed time to turn light ON (format: "HH:MM", 24-hour) (optional)
+- `stop_time`: Fixed time to turn light OFF (format: "HH:MM", 24-hour) (optional)
+
+**Light Logic Priority:**
+1. **Stop Time** (highest): If `stop_time` is reached, light turns OFF regardless of other conditions
+2. **Explicit Time Window**: If `start_time`/`stop_time` are set, follows this schedule
+3. **Sunrise/Sunset with Offsets**: Uses calculated sunrise/sunset times with configured offsets
+4. **Default**: Light remains OFF if no conditions are met
+
+**Light Examples:**
+```json
+"Lights": [
+  {
+    "brand": "smartthings", 
+    "name": "String Lights",
+    "when": "reservations_only",
+    "minutes_before_sunset": 30,
+    "minutes_after_sunrise": 30,
+    "start_time": null,
+    "stop_time": "23:00"
+  },
+  {
+    "brand": "smartthings",
+    "name": "Porch Light", 
+    "when": "reservations_only",
+    "start_time": "18:00",
+    "stop_time": "22:00"
+  },
+  {
+    "brand": "smartthings",
+    "name": "Garden Lights",
+    "when": "non_reservations", 
+    "minutes_before_sunset": 15,
+    "minutes_after_sunrise": 15
+  }
+]
+```
+
+**Light Slack Notifications:**
+- Successful changes: `💡 Updated Lights 'String Lights' at 'Paradise Cove': OFF → ON`
+- With retries: `💡 Updated Lights 'String Lights' at 'Paradise Cove': OFF → ON (verified on attempt 2)`
+- Failures: `⚠️ Failed to update Lights 'String Lights' at 'Paradise Cove' to ON after 3 attempts`
 
 #### Thermostat Configuration (with Frequency and Alerts)
 

@@ -133,3 +133,8 @@ variable "lock_code_verify_max_attempts" {
   description = "Max attempts to verify a lock code"
   type = number
 }
+
+variable "light_verify_max_attempts" {
+  description = "Max attempts to verify a light state change"
+  type = number
+}
