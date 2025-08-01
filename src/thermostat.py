@@ -171,8 +171,15 @@ def check_temperature_alerts(thermostat_name: str, property_name: str, current_m
     alerts = temperature_config.get('alerts', {})
     
     # Check if alerts are enabled (default to True if not specified)
-    if not alerts.get('enabled', True):
+    alerts_enabled = alerts.get('enabled', True)
+    logger.info(f"check_temperature_alerts: {thermostat_name} - alerts enabled: {alerts_enabled}")
+    
+    if not alerts_enabled:
+        logger.info(f"check_temperature_alerts: {thermostat_name} - alerts disabled, returning early")
         return alerts_sent
+    
+    logger.info(f"check_temperature_alerts: {thermostat_name} - checking thresholds for mode '{current_mode}', cool={current_cool_temp}°F, heat={current_heat_temp}°F")
+    logger.info(f"check_temperature_alerts: {thermostat_name} - alert thresholds: {alerts}")
     
     alert_messages = []
     
@@ -181,22 +188,34 @@ def check_temperature_alerts(thermostat_name: str, property_name: str, current_m
         cool_below = alerts.get('cool_below')
         cool_above = alerts.get('cool_above')
         
+        logger.info(f"check_temperature_alerts: {thermostat_name} - checking cool alerts: below={cool_below}, above={cool_above}")
+        
         if cool_below is not None and current_cool_temp < cool_below:
-            alert_messages.append(f"{ALERT_EMOJI_COOL} Cool setpoint {current_cool_temp}°F is below threshold {cool_below}°F")
+            alert_msg = f"{ALERT_EMOJI_COOL} Cool setpoint {current_cool_temp}°F is below threshold {cool_below}°F"
+            alert_messages.append(alert_msg)
+            logger.warning(f"check_temperature_alerts: {thermostat_name} - COOL BELOW violation: {alert_msg}")
             
         if cool_above is not None and current_cool_temp > cool_above:
-            alert_messages.append(f"{ALERT_EMOJI_COOL} Cool setpoint {current_cool_temp}°F is above threshold {cool_above}°F")
+            alert_msg = f"{ALERT_EMOJI_COOL} Cool setpoint {current_cool_temp}°F is above threshold {cool_above}°F"
+            alert_messages.append(alert_msg)
+            logger.warning(f"check_temperature_alerts: {thermostat_name} - COOL ABOVE violation: {alert_msg}")
     
     # Check heating temperature alerts
     if current_mode in ['heat', 'auto']:
         heat_below = alerts.get('heat_below')
         heat_above = alerts.get('heat_above')
         
+        logger.info(f"check_temperature_alerts: {thermostat_name} - checking heat alerts: below={heat_below}, above={heat_above}")
+        
         if heat_below is not None and current_heat_temp < heat_below:
-            alert_messages.append(f"{ALERT_EMOJI_HEAT} Heat setpoint {current_heat_temp}°F is below threshold {heat_below}°F")
+            alert_msg = f"{ALERT_EMOJI_HEAT} Heat setpoint {current_heat_temp}°F is below threshold {heat_below}°F"
+            alert_messages.append(alert_msg)
+            logger.warning(f"check_temperature_alerts: {thermostat_name} - HEAT BELOW violation: {alert_msg}")
             
         if heat_above is not None and current_heat_temp > heat_above:
-            alert_messages.append(f"{ALERT_EMOJI_HEAT} Heat setpoint {current_heat_temp}°F is above threshold {heat_above}°F")
+            alert_msg = f"{ALERT_EMOJI_HEAT} Heat setpoint {current_heat_temp}°F is above threshold {heat_above}°F"
+            alert_messages.append(alert_msg)
+            logger.warning(f"check_temperature_alerts: {thermostat_name} - HEAT ABOVE violation: {alert_msg}")
     
     # Send alerts if any violations found
     if alert_messages:
@@ -216,6 +235,8 @@ def check_temperature_alerts(thermostat_name: str, property_name: str, current_m
             logger.warning(f"Temperature alert sent for {thermostat_name} at {property_name}")
         except Exception as e:
             logger.error(f"Failed to send temperature alert for {thermostat_name} at {property_name}: {str(e)}")
+    else:
+        logger.info(f"check_temperature_alerts: {thermostat_name} - no alert violations found")
     
     return alerts_sent
 

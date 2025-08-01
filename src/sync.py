@@ -427,13 +427,20 @@ def process_property_thermostats(
             updates.append(f"Freeze protection override for {property_name} - {thermostat['name']}")
         
         # Check temperature alerts for reservation-only configurations
+        logger.info(f"Alert check conditions: has_reservation={has_reservation}, temperature_config exists={temperature_config is not None}, alerts in config={temperature_config.get('alerts') if temperature_config else None}")
+        
         if has_reservation and temperature_config and temperature_config.get('alerts'):
+            logger.info(f"Checking temperature alerts for {thermostat['name']} at {property_name}")
             alerts_sent = check_temperature_alerts(
                 thermostat['name'], property_name, mode, cool_temp, heat_temp, temperature_config
             )
             if alerts_sent:
                 # Log that alerts were sent but don't add to updates since these are alerts, not changes
                 logger.info(f"Temperature alerts sent for {thermostat['name']} at {property_name}: {len(alerts_sent)} alerts")
+            else:
+                logger.info(f"No temperature alerts triggered for {thermostat['name']} at {property_name}")
+        else:
+            logger.info(f"Skipping temperature alert check for {thermostat['name']} - conditions not met")
         
         property_updates.extend(updates)
         property_errors.extend(errors)
