@@ -1,4 +1,31 @@
-# Syncing Rental Wyze De- Freeze protection and energy-saving modes
+# Rental Device Sync - Smart Home Automation for Short-Term Rentals
+
+This Azure Functions application automatically synchronizes smart home devices for rental properties. Built on Python 3.11 with Azure Functions v2, it integrates with Hospitable calendars to manage Wyze and SmartThings devices, looking one week in advance to add, update, or delete access codes and control lighting and thermostats based on reservation schedules.
+
+## Key Features
+
+### 🔒 **Smart Lock Management**
+
+- Automatic guest code creation using last 4 digits of phone numbers
+- Retry logic with configurable attempts for reliable code deployment
+- Time-based code activation during reservation periods
+- Comprehensive error handling and Slack notifications
+
+### 💡 **Intelligent Light Control**
+
+- Sunrise/sunset automation with configurable offsets
+- Fixed time schedules with priority-based logic
+- Reservation-aware lighting (on during stays, off when vacant)
+- Retry verification for reliable state changes
+- Detailed before/after Slack notifications
+
+### 🌡️ **Advanced Thermostat Management**
+
+- Frequency control: "first_day" vs "daily" temperature changes
+- Temperature threshold alerts with customizable limits
+- Detailed before/after change tracking in Slack
+- Support for both SmartThings and Wyze thermostats
+- Freeze protection and energy-saving modes
 
 ### 📊 **Application Insights Integration**
 
@@ -10,43 +37,19 @@
 
 ### 📱 **Enhanced Slack Integration**
 
-- Consistent notification format across all device typesis app will synchronize Wyze devices for rental use. This Azure Function looks one week in advance from your Hospitable calendar and adds, updates, or deletes codes into Wyze or SmartThings locks.
-
-## Key Features
-
-### 🔒 **Smart Lock Management**
-- Automatic guest code creation using last 4 digits of phone numbers
-- Retry logic with configurable attempts for reliable code deployment
-- Time-based code activation during reservation periods
-- Comprehensive error handling and Slack notifications
-
-### 💡 **Intelligent Light Control**
-- Sunrise/sunset automation with configurable offsets
-- Fixed time schedules with priority-based logic
-- Reservation-aware lighting (on during stays, off when vacant)
-- Retry verification for reliable state changes
-- Detailed before/after Slack notifications
-
-### 🌡️ **Advanced Thermostat Management**
-- Frequency control: "first_day" vs "daily" temperature changes
-- Temperature threshold alerts with customizable limits
-- Detailed before/after change tracking in Slack
-- Support for both SmartThings and Wyze thermostats
-- Freeze protection and energy-saving modes
-
-### � **Application Insights Integration**
-- Comprehensive telemetry tracking for all function executions
-- Custom metrics for execution times and performance monitoring
-- Exception tracking with detailed error analysis
-- Event tracking for function starts, completions, and failures
-- Dashboard-ready metrics for operational insights
-
-### �📱 **Enhanced Slack Integration**
 - Consistent notification format across all device types
 - Before/after state tracking for all changes
 - Retry attempt reporting for transparency
 - Error categorization with helpful emoji indicators
 - Customizable alert channels for different notification types
+
+### ⚡ **Modern Python 3.11 Runtime**
+
+- Enhanced performance with up to 25% speed improvements over Python 3.9
+- Better error messages and debugging capabilities
+- Latest security patches and stability improvements
+- Azure Functions v2 programming model for optimal cloud performance
+- Improved dependency isolation and faster cold starts
 
 ## Setup
 
@@ -60,12 +63,14 @@ Fork the repository to your GitHub account for deployment to Azure.
 
 Use App Registrations in Azure. Run these commands from Azure PowerShell in the portal or locally:
 
-**Get Subscription GUID**
+#### Get Subscription GUID
+
 ```sh
 az account show --query id
 ```
 
-**Setup App Registration**
+#### Setup App Registration
+
 ```sh
 az ad sp create-for-rbac --name terraform-github-rental-sync --role Contributor --scopes /subscriptions/00000000-0000-0000-0000-000000000000
 ```
@@ -81,7 +86,7 @@ Create an Azure Storage Account to store Terraform state files.
 
    Follow these [Microsoft Instructions](https://learn.microsoft.com/en-us/devops/deliver/iac-github-actions) for more details.
 
-3. Update `storage_account_name` in `./terrafromprofivers.tf ` with the storage account name you created.
+3. Update `storage_account_name` in `./terraform/providers.tf` with the storage account name you created.
 
 ### 4. Setup Slack Bot
 
@@ -95,7 +100,7 @@ Create a Wyze developer API from the [Wyze Developer Portal](https://developer-a
 
 Add the following GitHub Action Secrets:
 
-```
+```env
 AAD_OBJECTID_ADMIN
 AZURE_AD_CLIENT_ID
 AZURE_AD_CLIENT_SECRET
@@ -129,34 +134,40 @@ OPENWEATHERMAP_KEY
 
 The following environment variables can be configured in your Terraform variables:
 
-**API Delays and Retry Settings:**
+#### API Delays and Retry Settings
+
 - `WYZE_API_DELAY_SECONDS`: Delay between Wyze API calls (default: 10)
 - `SMARTTHINGS_API_DELAY_SECONDS`: Delay between SmartThings API calls (default: 3)
 - `LOCK_CODE_ADD_MAX_ATTEMPTS`: Maximum attempts to add a lock code (default: 3)
 - `LOCK_CODE_VERIFY_MAX_ATTEMPTS`: Maximum attempts to verify a lock code (default: 3)
 - `LIGHT_VERIFY_MAX_ATTEMPTS`: Maximum attempts to verify light state changes (default: 3)
 
-**Recent Change:**
+#### Recent Changes
+
 - SmartThings lock code refreshes are now minimized to avoid API throttling and errors. Lock status is retrieved without forcing a refresh except when absolutely necessary.
 
-**Slack Message Format Update:**
+#### Slack Message Format Update
+
 - All lock code Slack messages now include the lock name for clarity. Example:
   `:key: Added Lock code for John at Paradise Cove Enchanted Oaks on Master Bath Closet Door Lock (verified on attempt 2)`
 
-**Time and Location Settings:**
+#### Time and Location Settings
+
 - `TIMEZONE`: Timezone for time calculations (e.g., "America/Chicago")
 - `CHECK_IN_OFFSET_HOURS`: Hours to offset check-in time (default: -1)
 - `CHECK_OUT_OFFSET_HOURS`: Hours to offset check-out time (default: 1)
 
-**Notification Settings:**
+#### Notification Settings
+
 - `SLACK_CHANNEL`: Slack channel for notifications (e.g., "#rentals")
 - `ALWAYS_SEND_SLACK_SUMMARY`: Always send summary messages (default: false)
 
-**Timer and Environment Settings:**
+#### Timer and Environment Settings
+
 - `NON_PROD`: Set to true for non-production environments (default: false)
 - `LOCAL_DEVELOPMENT`: Set to true for local development (default: false)
 
-> **Note**: The scheduled timer function runs every 30 minutes **only in production environments** (`NON_PROD=false`). In non-production environments, the timer is completely disabled to prevent accidental executions. Use the HTTP trigger endpoints for manual testing in non-production.
+> **Note**: The scheduled timer function runs every 5 minutes **only in production environments** (`NON_PROD=false`). In non-production environments, the timer is completely disabled to prevent accidental executions. Use the HTTP trigger endpoints for manual testing in non-production.
 
 ### 7. Deploy the Azure Functions
 
@@ -166,7 +177,8 @@ Run the `Deploy Prod` GitHub Action to deploy the Azure Functions and start runn
 
 Your deployment now includes Azure Application Insights for comprehensive monitoring:
 
-**Available Metrics and Insights:**
+#### Available Metrics and Insights
+
 - **Function Execution Times**: Track how long each sync operation takes
 - **Error Tracking**: Automatic exception capture with stack traces
 - **Custom Events**: Function start/completion/failure events with context
@@ -174,14 +186,16 @@ Your deployment now includes Azure Application Insights for comprehensive monito
 - **Live Metrics**: Real-time function execution monitoring
 - **Dependency Tracking**: Monitor calls to external APIs (Wyze, SmartThings, Slack)
 
-**Access Application Insights:**
+#### Access Application Insights
+
 1. Navigate to your Azure resource group in the Azure portal
 2. Open the Application Insights resource named `{app_name}-appinsights`
 3. Use the **Logs** section to query custom telemetry data
 4. Check **Live Metrics** for real-time monitoring
 5. Review **Failures** for exception details and stack traces
 
-**Example Queries:**
+#### Example Queries
+
 ```kusto
 // Function execution times over the last 24 hours
 customEvents
@@ -201,8 +215,7 @@ customEvents
 
 Run `Cleanup Prod` to remove the deployment.
 
-
-### 9. Adding Properties, Locks, Lights, and Thermostats to Azure Storage Table
+### 10. Adding Properties, Locks, Lights, and Thermostats to Azure Storage Table
 
 Each device (lock, light, thermostat) should be added to the Azure Storage Table called `properties`.
 
@@ -219,7 +232,8 @@ Each device (lock, light, thermostat) should be added to the Azure Storage Table
 
 SmartThings lights can be controlled based on time schedules, sunrise/sunset calculations, and reservation status. The system includes retry logic and comprehensive Slack notifications.
 
-**Light Configuration Fields:**
+##### Light Configuration Fields
+
 - `brand`: Always "smartthings" for SmartThings lights
 - `name`: The exact device name as it appears in SmartThings
 - `when`: When the light should operate
@@ -230,13 +244,15 @@ SmartThings lights can be controlled based on time schedules, sunrise/sunset cal
 - `start_time`: Fixed time to turn light ON (format: "HH:MM", 24-hour) (optional)
 - `stop_time`: Fixed time to turn light OFF (format: "HH:MM", 24-hour) (optional)
 
-**Light Logic Priority:**
+##### Light Logic Priority
+
 1. **Stop Time** (highest): If `stop_time` is reached, light turns OFF regardless of other conditions
 2. **Explicit Time Window**: If `start_time`/`stop_time` are set, follows this schedule
 3. **Sunrise/Sunset with Offsets**: Uses calculated sunrise/sunset times with configured offsets
 4. **Default**: Light remains OFF if no conditions are met
 
-**Light Examples:**
+##### Light Examples
+
 ```json
 "Lights": [
   {
@@ -265,7 +281,8 @@ SmartThings lights can be controlled based on time schedules, sunrise/sunset cal
 ]
 ```
 
-**Light Slack Notifications:**
+##### Light Slack Notifications
+
 - Successful changes: `💡 Updated Lights 'String Lights' at 'Paradise Cove': OFF → ON`
 - With retries: `💡 Updated Lights 'String Lights' at 'Paradise Cove': OFF → ON (verified on attempt 2)`
 - Failures: `⚠️ Failed to update Lights 'String Lights' at 'Paradise Cove' to ON after 3 attempts`
@@ -274,11 +291,13 @@ SmartThings lights can be controlled based on time schedules, sunrise/sunset cal
 
 You can now control when thermostat changes are made during reservations using the `frequency` field, and configure Slack alerts for temperature setpoints using the `alerts` field.
 
-**Frequency Options:**
+##### Frequency Options
+
 - `"first_day"` (default): Only apply changes on the check-in day
 - `"daily"`: Apply changes every day during the reservation
 
-**Alert Options:**
+##### Alert Options
+
 - `cool_below`: Alert if cooling setpoint is below this value
 - `cool_above`: Alert if cooling setpoint is above this value
 - `heat_below`: Alert if heating setpoint is below this value
@@ -286,7 +305,8 @@ You can now control when thermostat changes are made during reservations using t
 - `enabled`: Boolean to enable/disable alerts (default: true)
 - `slack_channel`: Optional custom Slack channel for alerts
 
-**Example Table Object in JSON:**
+##### Example Table Object in JSON
+
 ```json
 {
   "PartitionKey": "Boston - Main St",
@@ -353,7 +373,8 @@ You can now control when thermostat changes are made during reservations using t
 }
 ```
 
-**Alert Message Example:**
+##### Alert Message Example
+
 ```
 🌡️ Thermostat Alert - Boston - Main St
 Thermostat: Upstairs
@@ -363,7 +384,8 @@ Violations:
 • 🔵 Cool setpoint 68°F is below threshold 70°F
 ```
 
-**Temperature Change Message Example:**
+##### Temperature Change Message Example
+
 ```
 🌡️ Updated Thermostat 'Upstairs' at 'Boston - Main St'
 Current Temperature: 73°F
@@ -373,17 +395,45 @@ Changes Made:
 • Heat: 72°F → 68°F
 ```
 
-
 ## Azure Functions
 
 You will get two Azure Functions:
 
-1. **Hourly Cron Job:** This function runs hourly and will message you only if there are actions taken. To always get a message, set `ALWAYS_SEND_SLACK_SUMMARY` to true.
+1. **5-Minute Timer Cron Job:** This function runs every 5 minutes and will message you only if there are actions taken. To always get a message, set `ALWAYS_SEND_SLACK_SUMMARY` to true.
 2. **HTTP Post Trigger:** This function can delete all guest codes. Use this URL:
    ```
    https://{{app-name}}-functions.azurewebsites.net/api/trigger_sync?delete_all_guest_codes=false
    ```
    All guest codes will be displayed with the word Guest, first name, and start date of reservation, e.g., `Guest Robert 20240412`.
+
+## Runtime Requirements
+
+### Python 3.11
+
+This application requires **Python 3.11** for:
+
+- Enhanced performance and faster execution
+- Better error handling and debugging
+- Latest security features
+- Compatibility with Azure Functions v2 programming model
+
+### Local Development Setup
+
+For local development, ensure you have Python 3.11 installed:
+
+```bash
+# Check Python version
+python --version  # Should show 3.11.x
+
+# Navigate to function app
+cd src
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the function locally
+func start
+```
 
 ## Known Issues with Wyze Locks
 
@@ -416,11 +466,13 @@ For bulk importing property configurations into Azure Table Storage, use the pro
 ### Prerequisites
 
 Install required Python packages:
+
 ```sh
 pip install pandas azure-data-tables
 ```
 
 **For Key Vault URL usage:**
+
 - You must be logged in with `az login`
 - You must have permissions to read the Key Vault secret
 
@@ -430,13 +482,15 @@ pip install pandas azure-data-tables
 2. Get your Azure Storage Account connection string from the Azure portal OR use a Key Vault secret URL
 3. Run the import script:
 
-**Option 1: Direct connection string**
+#### Option 1: Direct connection string
+
 ```sh
 cd scripts/properties-import
 python import.py "DefaultEndpointsProtocol=https;AccountName=<your-account>;AccountKey=<your-key>;EndpointSuffix=core.windows.net"
 ```
 
-**Option 2: Key Vault secret URL**
+#### Option 2: Key Vault secret URL
+
 ```sh
 cd scripts/properties-import
 python import.py "https://<vault>.vault.azure.net/secrets/<secret-name>/<version>"
@@ -445,6 +499,7 @@ python import.py "https://<vault>.vault.azure.net/secrets/<secret-name>/<version
 ### CSV Format
 
 The CSV file should include at minimum:
+
 - `PartitionKey`: PMS property name
 - `RowKey`: PMS System (e.g., "Hospitable")
 
@@ -460,15 +515,15 @@ Additional columns will be imported as entity properties. Complex JSON objects (
 
 ### First Time Local
 
-For first time run of any scripts use
+For first time run of any scripts use:
 
-```
+```bash
 chmod +x ./scripts/<filename>.sh
 ```
 
-### Setup Enviorment Local
+### Setup Environment Local
 
-```
+```bash
 python3 -m venv .venv
 . .venv/bin/activate
 ```

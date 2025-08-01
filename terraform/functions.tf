@@ -13,7 +13,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
   
   site_config {
     application_stack {
-      python_version = "3.9"
+      python_version = "3.11"
     }
     application_insights_connection_string = azurerm_application_insights.app_insights.connection_string
     application_insights_key = azurerm_application_insights.app_insights.instrumentation_key
@@ -23,6 +23,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     "TIMEZONE" = var.timezone
     FUNCTIONS_WORKER_RUNTIME = "python"
     "WEBSITE_RUN_FROM_PACKAGE" = "1"
+    "PYTHON_ISOLATE_WORKER_DEPENDENCIES" = "1"
     VAULT_URL = azurerm_key_vault.key_vault.vault_uri
     SLACK_CHANNEL = var.slack_channel
     CHECK_IN_OFFSET_HOURS = var.check_in_offset_hours
