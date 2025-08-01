@@ -4,6 +4,7 @@ sunrise/sunset, and reservation status.
 """
 from logger import Logger
 import os
+from datetime import timedelta
 from devices import Device
 from slack_notify import send_slack_message
 from utilty import format_datetime, parse_local_time
@@ -62,9 +63,21 @@ def determine_light_state(light, current_time, is_night, is_day):
     
     # Check if we're past the stop time (highest priority) - should always turn off after stop time
     if light.get('stop_time') is not None:
-        stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
-        logger.info(f"determine_light_state: checking stop_time={stop_time}, current >= stop? {current_time >= stop_time}")
-        if current_time >= stop_time:
+        stop_time_today = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
+        logger.info(f"determine_light_state: checking stop_time_today={stop_time_today}, current >= stop? {current_time >= stop_time_today}")
+        
+        # Handle midnight crossing: check if we should compare against yesterday's stop time
+        # If current time is less than today's stop time, check if we're past yesterday's stop time
+        if current_time < stop_time_today:
+            # Create yesterday's stop time for comparison
+            yesterday = current_time - timedelta(days=1)
+            stop_time_yesterday = parse_local_time(light['stop_time'], current_time.tzinfo.zone, yesterday)
+            logger.info(f"determine_light_state: checking yesterday's stop_time={stop_time_yesterday}")
+            if current_time >= stop_time_yesterday:
+                logger.info("determine_light_state: past yesterday's stop_time")
+                return False
+        
+        if current_time >= stop_time_today:
             logger.info("determine_light_state: returning False due to stop_time")
             return False
 
@@ -80,8 +93,18 @@ def determine_light_state(light, current_time, is_night, is_day):
         if is_night:
             # If only stop time is defined (no start time), use sunrise/sunset timing until stop time
             if light.get('stop_time') is not None:
-                stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
-                result = current_time < stop_time
+                stop_time_today = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
+                
+                # Handle midnight crossing: check if we should compare against yesterday's stop time
+                if current_time < stop_time_today:
+                    # Create yesterday's stop time for comparison
+                    yesterday = current_time - timedelta(days=1)
+                    stop_time_yesterday = parse_local_time(light['stop_time'], current_time.tzinfo.zone, yesterday)
+                    if current_time >= stop_time_yesterday:
+                        logger.info(f"determine_light_state: midnight crossing - past yesterday's stop_time")
+                        return False
+                
+                result = current_time < stop_time_today
                 logger.info(f"determine_light_state: is_night=True, stop_time check result={result}")
                 return result
             else:
@@ -100,8 +123,18 @@ def determine_light_state(light, current_time, is_night, is_day):
     # Priority 4: Only explicit stop time (turn on until stop time)
     elif light.get('stop_time') is not None:
         logger.info("determine_light_state: using only stop_time")
-        stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
-        return current_time < stop_time
+        stop_time_today = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
+        
+        # Handle midnight crossing: check if we should compare against yesterday's stop time
+        if current_time < stop_time_today:
+            # Create yesterday's stop time for comparison
+            yesterday = current_time - timedelta(days=1)
+            stop_time_yesterday = parse_local_time(light['stop_time'], current_time.tzinfo.zone, yesterday)
+            if current_time >= stop_time_yesterday:
+                logger.info("determine_light_state: midnight crossing - past yesterday's stop_time")
+                return False
+        
+        return current_time < stop_time_today
     
     # Default: Light should be off
     logger.info("determine_light_state: no conditions met, returning False")
