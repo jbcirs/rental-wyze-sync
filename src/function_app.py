@@ -68,56 +68,62 @@ else:
             logging.error(f"Failed to initialize Key Vault client: {str(e)}")
             client = None
 
-@app.function_name(name="TimerTriggerSync")
-@app.timer_trigger(schedule="0 */5 * * * *",
-              arg_name="mytimer",
-              run_on_startup=False)
-def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
-    """Main timer function that processes reservations every 5 minutes"""
-    logging.info("=== TimerTriggerSync function is being registered ===")
+# Conditionally register timer function only in production
+if not NON_PROD:
+    @app.function_name(name="TimerTriggerSync")
+    @app.timer_trigger(schedule="0 */5 * * * *",
+                  arg_name="mytimer",
+                  run_on_startup=False)
+    def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
+        """Main timer function that processes reservations every 5 minutes - PRODUCTION ONLY"""
+        logging.info("=== TimerTriggerSync function is being registered ===")
 
-    # Log timer trigger details for debugging
-    logging.info(f'=== Timer trigger fired ===')
-    if mytimer.past_due:
-        logging.info('The timer is past due!')
-    logging.info(f'Schedule info: {mytimer.schedule_status}')
-    logging.info(f'Past due: {mytimer.past_due}')
-    logging.info(f'Environment: NON_PROD={NON_PROD}, LOCAL_DEVELOPMENT={LOCAL_DEVELOPMENT}')
-    
-    # Track function execution start
-    if telemetry_client:
-        telemetry_client.track_event('TimerTriggerSync_Started')
-    
-    # Log environment info for debugging
-    env_type = "Production" if not NON_PROD else "Non-Production"
-    logging.info(f'Timer execution started - {env_type} environment')
-    
-    logging.info('Python timer trigger function executed at %s', mytimer)
-
-    try:
-        execution_start = time.time()
-        logging.info('Starting process_reservations...')
+        # Log timer trigger details for debugging
+        logging.info(f'=== Timer trigger fired ===')
+        if mytimer.past_due:
+            logging.info('The timer is past due!')
+        logging.info(f'Schedule info: {mytimer.schedule_status}')
+        logging.info(f'Past due: {mytimer.past_due}')
+        logging.info(f'Environment: NON_PROD={NON_PROD}, LOCAL_DEVELOPMENT={LOCAL_DEVELOPMENT}')
         
-        from sync import process_reservations
-        process_reservations([Devices.LOCKS, Devices.LIGHTS, Devices.THERMOSTATS])
-        
-        execution_time = time.time() - execution_start
-        logging.info(f'process_reservations completed successfully in {execution_time:.2f} seconds')
-        
+        # Track function execution start
         if telemetry_client:
-            telemetry_client.track_metric('TimerSync_ExecutionTime', execution_time)
-            telemetry_client.track_event('TimerTriggerSync_Completed', {'execution_time_seconds': execution_time})
+            telemetry_client.track_event('TimerTriggerSync_Started')
+        
+        # Log environment info for debugging
+        env_type = "Production" if not NON_PROD else "Non-Production"
+        logging.info(f'Timer execution started - {env_type} environment')
+        
+        logging.info('Python timer trigger function executed at %s', mytimer)
+
+        try:
+            execution_start = time.time()
+            logging.info('Starting process_reservations...')
             
-    except Exception as e:
-        logging.error(f"Error executing function: {str(e)}")
-        import traceback
-        logging.error(f"Full traceback: {traceback.format_exc()}")
+            from sync import process_reservations
+            process_reservations([Devices.LOCKS, Devices.LIGHTS, Devices.THERMOSTATS])
+            
+            execution_time = time.time() - execution_start
+            logging.info(f'process_reservations completed successfully in {execution_time:.2f} seconds')
+            
+            if telemetry_client:
+                telemetry_client.track_metric('TimerSync_ExecutionTime', execution_time)
+                telemetry_client.track_event('TimerTriggerSync_Completed', {'execution_time_seconds': execution_time})
+                
+        except Exception as e:
+            logging.error(f"Error executing function: {str(e)}")
+            import traceback
+            logging.error(f"Full traceback: {traceback.format_exc()}")
+            
+            if telemetry_client:
+                telemetry_client.track_exception()
+                telemetry_client.track_event('TimerTriggerSync_Failed', {'error': str(e)})
         
-        if telemetry_client:
-            telemetry_client.track_exception()
-            telemetry_client.track_event('TimerTriggerSync_Failed', {'error': str(e)})
+        logging.info('=== Timer trigger completed ===')
     
-    logging.info('=== Timer trigger completed ===')
+    logging.info("TimerTriggerSync function registered for PRODUCTION environment")
+else:
+    logging.info("TimerTriggerSync function DISABLED for NON_PROD environment")
 
 @app.function_name(name="HealthCheck")
 @app.route(route="health", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.ANONYMOUS)
@@ -134,7 +140,7 @@ def health_check(req: func.HttpRequest) -> func.HttpResponse:
             "LOCAL_DEVELOPMENT": LOCAL_DEVELOPMENT,
             "python_version": os.sys.version.split()[0],
         },
-        "functions": ["TimerTriggerSync", "HealthCheck"],
+        "functions": ["HealthCheck", "SimpleTest"] + (["TimerTriggerSync"] if not NON_PROD else []),
         "vault_configured": bool(VAULT_URL)
     }
     
@@ -150,14 +156,129 @@ def health_check(req: func.HttpRequest) -> func.HttpResponse:
         status_code=200
     )
 
-# Simple test function
-@app.function_name(name="SimpleTest")
-@app.route(route="test")
-def simple_test(req: func.HttpRequest) -> func.HttpResponse:
-    """Ultra simple test function"""
-    logging.info("=== SimpleTest function executed ===")
-    return func.HttpResponse("Hello from Azure Functions!", status_code=200)
+@app.function_name(name="Sync_Locks")
+@app.route(route="trigger_sync_locks", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+def http_trigger_sync_locks(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('HTTP trigger function processed a request.')
+    
+    if telemetry_client:
+        telemetry_client.track_event('HttpTriggerSync_Locks_Started')
 
-# Log that function_app.py has loaded successfully
-logging.info("=== function_app.py loaded successfully with functions registered ===")
+    logging.info(f"req.params: {req.params}")
+    delete_all_guest_codes = req.params.get('delete_all_guest_codes', 'false').lower() == 'true'
+    logging.info(f"delete_all_guest_codes: {delete_all_guest_codes}")
+
+    if not delete_all_guest_codes:
+        try:
+            req_body = req.get_json()
+            logging.info(f"req_body: {req_body}")
+            delete_all_guest_codes = req_body.get('delete_all_guest_codes', 'false').lower() == 'true'
+            logging.info(f"delete_all_guest_codes: {delete_all_guest_codes}")
+        except ValueError:
+            logging.warning('Invalid JSON in request body.')
+
+    try:
+        execution_start = time.time()
+        from sync import process_reservations
+        process_reservations([Devices.LOCKS], delete_all_guest_codes)
+        execution_time = time.time() - execution_start
+        
+        if telemetry_client:
+            telemetry_client.track_metric('HttpSync_Locks_ExecutionTime', execution_time)
+            telemetry_client.track_event('HttpTriggerSync_Locks_Completed', 
+                                       {'execution_time_seconds': execution_time, 
+                                        'delete_all_guest_codes': delete_all_guest_codes})
+        
+        return func.HttpResponse("Function executed successfully.", status_code=200)
+    except Exception as e:
+        logging.error(f"Error executing function: {str(e)}")
+        if telemetry_client:
+            telemetry_client.track_exception()
+            telemetry_client.track_event('HttpTriggerSync_Locks_Failed', {'error': str(e)})
+        return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+    
+@app.function_name(name="Sync_Lights")
+@app.route(route="trigger_sync_lights", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+def http_trigger_sync_lights(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('HTTP trigger function processed a request.')
+    
+    if telemetry_client:
+        telemetry_client.track_event('HttpTriggerSync_Lights_Started')
+
+    try:
+        execution_start = time.time()
+        from sync import process_reservations
+        process_reservations([Devices.LIGHTS])
+        execution_time = time.time() - execution_start
+        
+        if telemetry_client:
+            telemetry_client.track_metric('HttpSync_Lights_ExecutionTime', execution_time)
+            telemetry_client.track_event('HttpTriggerSync_Lights_Completed', {'execution_time_seconds': execution_time})
+        
+        return func.HttpResponse("Function executed successfully.", status_code=200)
+    except Exception as e:
+        logging.error(f"Error executing function: {str(e)}")
+        if telemetry_client:
+            telemetry_client.track_exception()
+            telemetry_client.track_event('HttpTriggerSync_Lights_Failed', {'error': str(e)})
+        return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+    
+@app.function_name(name="Sync_Thermostats")
+@app.route(route="trigger_sync_thermostats", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+def http_trigger_sync_thermostats(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('HTTP trigger function processed a request.')
+    
+    if telemetry_client:
+        telemetry_client.track_event('HttpTriggerSync_Thermostats_Started')
+
+    try:
+        execution_start = time.time()
+        from sync import process_reservations
+        process_reservations([Devices.THERMOSTATS])
+        execution_time = time.time() - execution_start
+        
+        if telemetry_client:
+            telemetry_client.track_metric('HttpSync_Thermostats_ExecutionTime', execution_time)
+            telemetry_client.track_event('HttpTriggerSync_Thermostats_Completed', {'execution_time_seconds': execution_time})
+        
+        return func.HttpResponse("Function executed successfully.", status_code=200)
+    except Exception as e:
+        logging.error(f"Error executing function: {str(e)}")
+        if telemetry_client:
+            telemetry_client.track_exception()
+            telemetry_client.track_event('HttpTriggerSync_Thermostats_Failed', {'error': str(e)})
+        return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+    
+@app.function_name(name="Property_List")
+@app.route(route="property_list", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.FUNCTION)
+def property_list(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('HTTP trigger function processed a request get_property_list.')
+
+    try:
+        from hospitable import authenticate_hospitable, get_properties
+        token = authenticate_hospitable()
+        if not token:
+            logging.info("Unable to authenticate with Hospitable API.")
+            return
+
+        properties = get_properties(token)
+        if not properties:
+            logging.info("Unable to fetch properties from Hospitable API.")
+            return
+        
+        property_names = []
+        
+        for prop in properties:
+            property_names.append(prop['name'])
+
+        return func.HttpResponse(
+            json.dumps(property_names),
+            mimetype="application/json",
+            status_code=200
+        )
+
+    except Exception as e:
+        logging.error(f"Error executing function: {str(e)}")
+        return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+
 
