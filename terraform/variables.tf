@@ -13,6 +13,11 @@ variable "slack_channel" {
   type = string
 }
 
+variable "slack_errors_channel" {
+  description = "The slack channel for configuration validation errors"
+  type = string
+}
+
 variable "check_in_offset_hours" {
   description = "Check in offset hours"
   type = number
@@ -24,7 +29,7 @@ variable "check_out_offset_hours" {
 }
 
 variable "non_prod" {
-  description = "Non Prod"
+  description = "Non Prod - when true, disables scheduled timer execution"
   type = bool
 }
 
@@ -122,4 +127,25 @@ variable "openweathermap_key" {
 variable "seam_api_key" {
   description = "Seam API key"
   type        = string
+}
+
+variable "smartthings_api_delay_seconds" {
+  description = "SmartThings API call delay"
+  type = number
+}
+
+variable "lock_code_add_max_attempts" {
+  description = "Max attempts to add a lock code"
+  type = number
+}
+
+variable "lock_code_verify_max_attempts" {
+  description = "Max attempts to verify a lock code"
+  type = number
+}
+
+variable "light_verify_max_attempts" {
+  description = "Max attempts to verify a light state change"
+  type = number
+
 }

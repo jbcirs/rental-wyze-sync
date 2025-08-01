@@ -162,3 +162,4 @@ cython_debug/
 #Azure Blob Local
 __azurite_db_blob__.json
 __azurite_db_blob_extent__.json
+__azurite_db_table__.json

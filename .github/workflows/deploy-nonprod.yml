@@ -18,7 +18,7 @@ jobs:
 
     env:
       AZURE_FUNCTIONAPP_PACKAGE_PATH: 'src'
-      PYTHON_VERSION: '3.9'                           
+      PYTHON_VERSION: '3.11'                           
       ARM_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
       ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -53,6 +53,10 @@ jobs:
           rm requirements.txt
           zip -rq ../src.zip ./*
           cd ..
+
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
 
       - name: Terraform Init
         run: terraform init
