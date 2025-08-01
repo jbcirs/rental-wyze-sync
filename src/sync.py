@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from wyze_sdk import Client
+from seam import seam
 from hospitable import authenticate_hospitable, get_properties, get_reservations
 from slack_notify import send_slack_message, send_summary_slack_message
 import brands.wyze.locks as wyze_lock
@@ -21,7 +22,13 @@ from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
 import brands.smartthings.thermostats as smartthings_thermostats
+<<<<<<< HEAD
+import brands.seam.locks as seam_lock
+from brands.seam.seam import get_seam_token
+from thermostat import get_thermostat_settings
+=======
 from thermostat import get_thermostat_settings, should_process_thermostat_for_frequency, check_temperature_alerts_with_current_device
+>>>>>>> 802bf1e1408d8bd28058340428ea841d17d69918
 from azure.data.tables import TableServiceClient
 from utilty import format_datetime, filter_by_key, is_valid_hour
 from light import get_light_settings
@@ -51,6 +58,7 @@ ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false')
 HOSPITABLE = "Hospitable"
 SMARTTHINGS = "smartthings"
 WYZE = "wyze"
+SEAM = "seam"
 
 logger = Logger()
 
@@ -177,8 +185,19 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
 
         wyze_client = Client(token=wyze_token)
 
+<<<<<<< HEAD
+        ##SEAM
+        seam_token = get_seam_token()
+        if not seam_token:
+            send_slack_message("Unable to authenticate with Seam API.")
+            return
+        
+        seam_client = seam(api_key=seam_token)
+
+=======
         # Get active properties from database
         logger.info(f"Retrieving active properties with devices: {[d.value for d in devices]}")
+>>>>>>> 802bf1e1408d8bd28058340428ea841d17d69918
         table_properties = active_property(devices)
         logger.info(f"Found {len(table_properties)} active properties to process")
         
@@ -295,7 +314,14 @@ def process_property_locks(
                 reservations, current_time
             )
         
+<<<<<<< HEAD
+        elif lock['brand'] == SEAM:
+            deletions, updates, additions, errors = seam_lock.sync()
+
+
+=======
         # Collect results from lock processing
+>>>>>>> 802bf1e1408d8bd28058340428ea841d17d69918
         property_deletions.extend(deletions)
         property_updates.extend(updates)
         property_additions.extend(additions)

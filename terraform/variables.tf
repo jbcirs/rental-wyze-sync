@@ -124,6 +124,11 @@ variable "openweathermap_key" {
   type           = string
 }
 
+variable "seam_api_key" {
+  description = "Seam API key"
+  type        = string
+}
+
 variable "smartthings_api_delay_seconds" {
   description = "SmartThings API call delay"
   type = number
@@ -142,4 +147,5 @@ variable "lock_code_verify_max_attempts" {
 variable "light_verify_max_attempts" {
   description = "Max attempts to verify a light state change"
   type = number
+
 }
