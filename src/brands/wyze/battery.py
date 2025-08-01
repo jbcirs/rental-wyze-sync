@@ -1,6 +1,6 @@
 from typing import Optional, Dict
 from logger import Logger
-from brands.wyze.wyze import get_wyze_token, get_device_by_name
+from brands.wyze.wyze import get_wyze_token, get_device_by_name, get_device_property_list
 from wyze_sdk import Client
 
 logger = Logger()
@@ -37,8 +37,8 @@ def get_battery_level(lock_config: Dict, property_name: str) -> Optional[int]:
         
         # Get device info/status using property list to get battery (P8)
         try:
-            # Use the SDK method to get property list which contains battery info (P8)
-            property_list = client.get_device_property_list(device_mac=lock_device.mac, device_model=lock_device.product.model)
+            # Use our custom function that calls the SDK method directly
+            property_list = get_device_property_list(client, lock_device.mac, lock_device.product.model)
             
             if not property_list:
                 error_msg = f"Unable to get property list for Wyze lock {lock_name} at {property_name}"

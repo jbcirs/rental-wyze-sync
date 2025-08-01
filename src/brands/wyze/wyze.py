@@ -55,6 +55,36 @@ def get_wyze_token():
         logger.error(f"Wyze API Error: {str(e)}")
         return None
 
+def get_device_property_list(client, device_mac: str, device_model: str):
+    """
+    Get device property list using direct API call.
+    
+    Args:
+        client: Wyze API client
+        device_mac: Device MAC address
+        device_model: Device model
+        
+    Returns:
+        Dict containing property list response, or None if failed
+    """
+    try:
+        # Call the SDK method directly
+        response = client.get_device_property_list(mac=device_mac, model=device_model)
+        return response
+    except WyzeApiError as e:
+        error_code = getattr(e, 'code', 'unknown')
+        error_msg = f"Wyze API Error: Failed to get property list for device {device_mac}. Error code: {error_code}. {str(e)}"
+        logger.error(error_msg)
+        return None
+    except requests.exceptions.Timeout:
+        error_msg = f"Timeout Error: Connection to Wyze API timed out while getting property list for device {device_mac}."
+        logger.error(error_msg)
+        return None
+    except Exception as e:
+        error_msg = f"Unexpected Error: Failed to get property list for device {device_mac}. Error: {str(e)}"
+        logger.error(error_msg)
+        return None
+
 def get_device_by_name(client, name):
     """
     Find a Wyze device by its nickname.
