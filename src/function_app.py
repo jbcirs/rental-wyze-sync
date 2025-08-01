@@ -87,19 +87,13 @@ def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
     logging.info(f'Timer trigger fired - Schedule info: {mytimer.schedule_status}')
     logging.info(f'Timer trigger - Past due: {mytimer.past_due}')
     
-    # Only run scheduled timer in production environments
-    if NON_PROD:
-        logging.info('Skipping timer execution - scheduled timer only runs in production environments')
-        if telemetry_client:
-            telemetry_client.track_event('TimerTriggerSync_Skipped', {'reason': 'non_production_environment'})
-        return
-    
     # Track function execution start
     if telemetry_client:
         telemetry_client.track_event('TimerTriggerSync_Started')
     
     # Log environment info for debugging
-    logging.info(f'Timer execution started - Production environment (NON_PROD: {NON_PROD})')
+    env_type = "Production" if not NON_PROD else "Non-Production"
+    logging.info(f'Timer execution started - {env_type} environment (NON_PROD: {NON_PROD})')
     
     # Implement a simple lock mechanism to prevent concurrent executions
     current_time = time.time()
