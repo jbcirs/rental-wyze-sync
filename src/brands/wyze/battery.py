@@ -37,17 +37,22 @@ def get_battery_level(lock_config: Dict, property_name: str) -> Optional[int]:
         
         # Get device info/status using property list to get battery (P8)
         try:
-            # Try to get property list which contains battery info (P8)
-            property_list = client.locks.get_property_list(device_mac=lock_device.mac, device_model=lock_device.product.model)
+            # Use the SDK method to get property list which contains battery info (P8)
+            property_list = client.get_device_property_list(device_mac=lock_device.mac, device_model=lock_device.product.model)
             
-            if not property_list or 'property_list' not in property_list:
+            if not property_list:
                 error_msg = f"Unable to get property list for Wyze lock {lock_name} at {property_name}"
                 logger.error(error_msg)
                 return None
             
+            # Handle response format - check if it's wrapped in 'data' or direct
+            properties = property_list.get('property_list', [])
+            if not properties and 'data' in property_list:
+                properties = property_list['data'].get('property_list', [])
+            
             # Look for battery property (P8)
             battery_level = None
-            for prop in property_list['property_list']:
+            for prop in properties:
                 if prop.get('pid') == 'P8':
                     battery_level = int(prop.get('value', 0))
                     break
@@ -55,14 +60,17 @@ def get_battery_level(lock_config: Dict, property_name: str) -> Optional[int]:
             if battery_level is None:
                 error_msg = f"Battery property (P8) not found in property list for Wyze lock {lock_name} at {property_name}"
                 logger.error(error_msg)
+                # Log available properties for debugging
+                available_pids = [prop.get('pid') for prop in properties]
+                logger.info(f"Available properties for {lock_name}: {available_pids}")
                 return None
             
             logger.info(f"Retrieved battery level for Wyze lock {lock_name} at {property_name}: {battery_level}%")
             return battery_level
             
         except AttributeError as e:
-            # Fallback: try the old method if get_property_list doesn't exist
-            error_msg = f"get_property_list method not available in Wyze SDK. Error: {str(e)}"
+            # Fallback: try the old method if get_device_property_list doesn't exist
+            error_msg = f"get_device_property_list method not available in Wyze SDK. Error: {str(e)}"
             logger.warning(error_msg)
             
             # Try alternative method
