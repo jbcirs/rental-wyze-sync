@@ -132,6 +132,19 @@ def health_check(req: func.HttpRequest) -> func.HttpResponse:
     logging.info("=== HealthCheck function is being registered ===")
     logging.info('Health check requested')
     
+    # Build list of available functions based on environment
+    available_functions = [
+        "HealthCheck", 
+        "Sync_Locks", 
+        "Sync_Lights", 
+        "Sync_Thermostats", 
+        "Property_List"
+    ]
+    
+    # Add timer function only in production
+    if not NON_PROD:
+        available_functions.append("TimerTriggerSync")
+    
     health_info = {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
@@ -140,8 +153,15 @@ def health_check(req: func.HttpRequest) -> func.HttpResponse:
             "LOCAL_DEVELOPMENT": LOCAL_DEVELOPMENT,
             "python_version": os.sys.version.split()[0],
         },
-        "functions": ["HealthCheck", "SimpleTest"] + (["TimerTriggerSync"] if not NON_PROD else []),
-        "vault_configured": bool(VAULT_URL)
+        "functions": available_functions,
+        "vault_configured": bool(VAULT_URL),
+        "endpoints": {
+            "health": "GET /api/health",
+            "sync_locks": "POST /api/trigger_sync_locks",
+            "sync_lights": "POST /api/trigger_sync_lights", 
+            "sync_thermostats": "POST /api/trigger_sync_thermostats",
+            "property_list": "GET /api/property_list"
+        }
     }
     
     if telemetry_client:
