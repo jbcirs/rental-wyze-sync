@@ -21,7 +21,7 @@ from brands.wyze.wyze import get_wyze_token
 import brands.smartthings.locks as smartthings_lock
 import brands.smartthings.lights as smartthings_lights
 import brands.smartthings.thermostats as smartthings_thermostats
-from thermostat import get_thermostat_settings, should_process_thermostat_for_frequency, check_temperature_alerts
+from thermostat import get_thermostat_settings, should_process_thermostat_for_frequency, check_temperature_alerts_with_current_device
 from azure.data.tables import TableServiceClient
 from utilty import format_datetime, filter_by_key, is_valid_hour
 from light import get_light_settings
@@ -389,12 +389,15 @@ def process_property_thermostats(
                     temperature_config = temp_config
                     break
             
-            # Check temperature alerts FIRST - alerts run every day during reservations regardless of frequency
+            # Check temperature alerts FIRST - but we need current device settings, not target settings
             # This helps catch guests setting extreme temperatures that could run up costs
             if temperature_config and temperature_config.get('alerts'):
                 logger.info(f"Checking temperature alerts for {thermostat['name']} at {property_name} (runs daily during reservations)")
-                alerts_sent = check_temperature_alerts(
-                    thermostat['name'], property_name, mode, cool_temp, heat_temp, temperature_config
+                
+                # Use the helper function to check alerts with current device settings
+                alerts_sent = check_temperature_alerts_with_current_device(
+                    thermostat['name'], property_name, thermostat, property, 
+                    mode, cool_temp, heat_temp, temperature_config, wyze_thermostats_client
                 )
                 if alerts_sent:
                     logger.info(f"Temperature alerts sent for {thermostat['name']} at {property_name}: {len(alerts_sent)} alerts")

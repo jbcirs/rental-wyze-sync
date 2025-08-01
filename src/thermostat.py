@@ -1,6 +1,17 @@
 """
 Thermostat control logic for managing temperature settings based on weather,
 reservation status, and property configuration.
+
+This module serves as the main coordination layer for thermostat operations:
+- Determines optimal thermostat settings based on weather and reservations
+- Routes device communication to brand-specific modules in brands/ folders
+- Handles temperature alert checking and notifications
+- Manages frequency controls and freeze protection logic
+
+Brand-specific device communication is handled by:
+- brands/smartthings/thermostats.py - SmartThings API integration
+- brands/wyze/thermostats.py - Wyze API integration
+- brands/__template__/thermostats.py - Template for new brands
 """
 from weather import get_weather_forecast
 from logger import Logger
@@ -8,6 +19,8 @@ from datetime import datetime, timedelta
 from slack_notify import send_slack_message
 from typing import List, Tuple, Optional
 import os
+
+# === Configuration Constants ===
 
 logger = Logger()
 
@@ -21,6 +34,9 @@ DEFAULT_FREQUENCY = 'first_day'
 ALERT_EMOJI_COOL = '🔵'
 ALERT_EMOJI_HEAT = '🔴'
 ALERT_EMOJI_THERMOSTAT = '🌡️'
+
+# === Core Temperature Logic Functions ===
+# Functions for determining HVAC modes, temperature settings, and scenarios
 
 def determine_thermostat_mode(max_temp, min_temp):
     """
@@ -128,6 +144,9 @@ def check_and_override_for_freezing(min_temp, freeze_protection):
 
     return None, None, None
 
+# === Frequency and Processing Control Functions ===
+# Functions for controlling when thermostats should be processed
+
 def should_process_thermostat_for_frequency(temperature_config: dict, reservation_start_date: datetime.date, current_date: datetime.date) -> bool:
     """
     Determine if thermostat should be processed based on frequency setting.
@@ -151,6 +170,84 @@ def should_process_thermostat_for_frequency(temperature_config: dict, reservatio
         # Default to first_day behavior for unknown frequency values
         logger.warning(f"Unknown frequency value: {frequency}, defaulting to '{DEFAULT_FREQUENCY}'")
         return current_date == reservation_start_date
+
+# === Brand Router Functions ===
+# Functions for routing device communication to brand-specific modules
+
+def get_current_device_settings(thermostat, property_config, target_mode, target_cool, target_heat, wyze_client=None):
+    """
+    Get current thermostat settings from the physical device based on brand.
+    Routes to brand-specific implementations in their respective folders.
+    
+    Args:
+        thermostat: Thermostat configuration dictionary
+        property_config: Property configuration with brand settings
+        target_mode: Target mode (used for comparison)
+        target_cool: Target cooling temperature (used for comparison)
+        target_heat: Target heating temperature (used for comparison)
+        wyze_client: Optional Wyze client to avoid re-authentication
+        
+    Returns:
+        Tuple of (current_mode, current_cool_temp, current_heat_temp) or (target_mode, target_cool, target_heat) if unable to read
+    """
+    try:
+        brand = thermostat.get('brand', '').lower()
+        thermostat_name = thermostat.get('name', 'Unknown')
+        
+        if brand == 'smartthings':
+            import brands.smartthings.thermostats as smartthings_thermostats
+            return smartthings_thermostats.get_current_device_settings_from_config(
+                thermostat, property_config, target_mode, target_cool, target_heat
+            )
+            
+        elif brand == 'wyze':
+            import brands.wyze.thermostats as wyze_thermostats
+            return wyze_thermostats.get_current_device_settings_from_config(
+                thermostat, wyze_client, target_mode, target_cool, target_heat
+            )
+            
+        else:
+            logger.warning(f"Unknown thermostat brand '{brand}' for {thermostat_name} - using target settings for alerts")
+            return target_mode, target_cool, target_heat
+            
+    except Exception as e:
+        logger.warning(f"Error reading current device settings for {thermostat.get('name', 'Unknown')}: {str(e)} - using target settings for alerts")
+        return target_mode, target_cool, target_heat
+
+# === Alert System Functions ===
+# Functions for checking temperature alerts and routing to brand-specific device readers
+
+def check_temperature_alerts_with_current_device(thermostat_name: str, property_name: str, thermostat: dict, property_config: dict, target_mode: str, target_cool: int, target_heat: int, temperature_config: dict, wyze_client=None) -> list:
+    """
+    Check if current thermostat device settings violate alert thresholds by first reading actual device state.
+    This helps identify when guests set extreme temperatures that could increase energy costs.
+    
+    This is the main entry point for alert checking - it coordinates reading current device settings
+    and then checking those settings against configured alert thresholds.
+    
+    Args:
+        thermostat_name: Name of the thermostat
+        property_name: Name of the property
+        thermostat: Thermostat configuration dictionary
+        property_config: Property configuration with brand settings
+        target_mode: Target thermostat mode we would set
+        target_cool: Target cooling setpoint we would set
+        target_heat: Target heating setpoint we would set
+        temperature_config: Temperature configuration with alert settings
+        wyze_client: Optional Wyze client to avoid re-authentication
+        
+    Returns:
+        List of alert messages sent
+    """
+    # Get current device settings (not target settings) by routing to brand-specific implementation
+    current_mode, current_cool, current_heat = get_current_device_settings(
+        thermostat, property_config, target_mode, target_cool, target_heat, wyze_client
+    )
+    
+    # Check alerts against the CURRENT device settings
+    return check_temperature_alerts(
+        thermostat_name, property_name, current_mode, current_cool, current_heat, temperature_config
+    )
 
 def check_temperature_alerts(thermostat_name: str, property_name: str, current_mode: str, current_cool_temp: int, current_heat_temp: int, temperature_config: dict) -> list:
     """

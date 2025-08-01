@@ -1,6 +1,81 @@
 from devices import Device
 from slack_notify import send_slack_message
 from brands.smartthings.smartthings import *
+import json
+
+def get_current_device_settings_from_config(thermostat, property_config, target_mode, target_cool, target_heat):
+    """
+    Get current SmartThings thermostat settings from property configuration.
+    This function handles property config parsing and routes to the device communication function.
+    
+    Args:
+        thermostat: Thermostat configuration dictionary
+        property_config: Property configuration with brand settings
+        target_mode: Target mode (used for comparison)
+        target_cool: Target cooling temperature (used for comparison)  
+        target_heat: Target heating temperature (used for comparison)
+        
+    Returns:
+        Tuple of (current_mode, current_cool_temp, current_heat_temp) or (target_mode, target_cool, target_heat) if unable to read
+    """
+    try:
+        # Get SmartThings settings from property config
+        brand_settings = json.loads(property_config["BrandSettings"])
+        smartthings_settings = next((item for item in brand_settings if item['brand'] == 'smartthings'), None)
+        
+        if not smartthings_settings:
+            logger.warning(f"No SmartThings settings found for {thermostat.get('name', 'Unknown')}")
+            return target_mode, target_cool, target_heat
+        
+        return get_current_device_settings(
+            thermostat['name'], smartthings_settings['location'], target_mode, target_cool, target_heat
+        )
+        
+    except Exception as e:
+        logger.warning(f"Error reading SmartThings device settings for {thermostat.get('name', 'Unknown')}: {str(e)}")
+        return target_mode, target_cool, target_heat
+
+def get_current_device_settings(thermostat_name, location_name, target_mode, target_cool, target_heat):
+    """
+    Get current SmartThings thermostat settings from the physical device.
+    
+    Args:
+        thermostat_name: Name of the thermostat device
+        location_name: SmartThings location name
+        target_mode: Target mode (used for comparison)
+        target_cool: Target cooling temperature (used for comparison)  
+        target_heat: Target heating temperature (used for comparison)
+        
+    Returns:
+        Tuple of (current_mode, current_cool_temp, current_heat_temp) or (target_mode, target_cool, target_heat) if unable to read
+    """
+    try:
+        location_id = find_location_by_name(location_name)
+        if not location_id:
+            logger.warning(f"Could not find SmartThings location '{location_name}' for {thermostat_name}")
+            return target_mode, target_cool, target_heat
+        
+        thermostat_id = get_device_id_by_label(location_id, thermostat_name)
+        if not thermostat_id:
+            logger.warning(f"Could not find SmartThings device ID for {thermostat_name}")
+            return target_mode, target_cool, target_heat
+        
+        needs_update, current_device_settings = thermostat_needs_updating(
+            thermostat_id, target_mode, target_cool, target_heat
+        )
+        
+        if current_device_settings:
+            current_mode = current_device_settings['mode']
+            current_cool = current_device_settings['cool_temp']
+            current_heat = current_device_settings['heat_temp']
+            logger.info(f"Read SmartThings device settings for {thermostat_name}: Mode={current_mode}, Cool={current_cool}°F, Heat={current_heat}°F")
+            return current_mode, current_cool, current_heat
+        
+        return target_mode, target_cool, target_heat
+        
+    except Exception as e:
+        logger.warning(f"Error reading SmartThings device settings for {thermostat_name}: {str(e)}")
+        return target_mode, target_cool, target_heat
 
 def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
     """

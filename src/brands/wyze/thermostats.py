@@ -3,6 +3,7 @@ from devices import Device
 from datetime import datetime
 from slack_notify import send_slack_message
 from brands.wyze.wyze import *
+from wyze_sdk import Client
 
 # Configuration
 VAULT_URL = os.environ["VAULT_URL"]
@@ -11,6 +12,77 @@ LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'tru
 TIMEZONE = os.environ['TIMEZONE']
 ALWAYS_SEND_SLACK_SUMMARY = os.environ.get('ALWAYS_SEND_SLACK_SUMMARY', 'false').lower() == 'true'
 
+def get_current_device_settings_from_config(thermostat, wyze_client, target_mode, target_cool, target_heat):
+    """
+    Get current Wyze thermostat settings with client management.
+    This function handles Wyze client setup and routes to the device communication function.
+    
+    Args:
+        thermostat: Thermostat configuration dictionary
+        wyze_client: Optional Wyze client to avoid re-authentication
+        target_mode: Target mode (used for comparison)
+        target_cool: Target cooling temperature (used for comparison)
+        target_heat: Target heating temperature (used for comparison)
+        
+    Returns:
+        Tuple of (current_mode, current_cool_temp, current_heat_temp) or (target_mode, target_cool, target_heat) if unable to read
+    """
+    try:
+        # Use provided client or create new one
+        if wyze_client is None:
+            wyze_token = get_wyze_token()
+            if not wyze_token:
+                logger.warning(f"Could not get Wyze token for {thermostat.get('name', 'Unknown')}")
+                return target_mode, target_cool, target_heat
+            wyze_client = Client(token=wyze_token)
+        
+        return get_current_device_settings(
+            thermostat, wyze_client.thermostats, target_mode, target_cool, target_heat
+        )
+        
+    except Exception as e:
+        logger.warning(f"Error reading Wyze device settings for {thermostat.get('name', 'Unknown')}: {str(e)}")
+        return target_mode, target_cool, target_heat
+
+def get_current_device_settings(thermostat, wyze_client, target_mode, target_cool, target_heat):
+    """
+    Get current Wyze thermostat settings from the physical device.
+    
+    Args:
+        thermostat: Thermostat configuration dictionary
+        wyze_client: Wyze API client
+        target_mode: Target mode (used for comparison)
+        target_cool: Target cooling temperature (used for comparison)
+        target_heat: Target heating temperature (used for comparison)
+        
+    Returns:
+        Tuple of (current_mode, current_cool_temp, current_heat_temp) or (target_mode, target_cool, target_heat) if unable to read
+    """
+    try:
+        wyze_device = wyze_client.info(
+            device_mac=thermostat['mac'], device_model=thermostat['model']
+        )
+        
+        if not wyze_device:
+            logger.warning(f"Could not get Wyze device info for {thermostat.get('name', 'Unknown')}")
+            return target_mode, target_cool, target_heat
+        
+        status_result = thermostat_needs_updating(
+            wyze_client, wyze_device, target_mode, target_cool, target_heat, 'home'
+        )
+        
+        if status_result and len(status_result) >= 8:
+            needs_update, current_temperature, thermostat_humidity, thermostat_mode, thermostat_fan_mode, heating_setpoint, cooling_setpoint, thermostat_scenario = status_result
+            if heating_setpoint is not None and cooling_setpoint is not None:
+                current_mode = thermostat_mode.value[1] if hasattr(thermostat_mode, 'value') else str(thermostat_mode)
+                logger.info(f"Read Wyze device settings for {thermostat['name']}: Mode={current_mode}, Cool={cooling_setpoint}°F, Heat={heating_setpoint}°F")
+                return current_mode, cooling_setpoint, heating_setpoint
+        
+        return target_mode, target_cool, target_heat
+        
+    except Exception as e:
+        logger.warning(f"Error reading Wyze device settings for {thermostat.get('name', 'Unknown')}: {str(e)}")
+        return target_mode, target_cool, target_heat
 
 def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name):
     """
