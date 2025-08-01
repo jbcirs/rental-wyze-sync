@@ -1,6 +1,6 @@
 from typing import Optional, Dict
 from logger import Logger
-from brands.wyze.wyze import get_wyze_token, get_device_by_name, get_device_property_list
+from brands.wyze.wyze import get_wyze_token, find_device_by_name_direct, get_device_property_list
 from wyze_sdk import Client
 
 logger = Logger()
@@ -28,8 +28,8 @@ def get_battery_level(lock_config: Dict, property_name: str) -> Optional[int]:
         
         client = Client(token=wyze_token)
         
-        # Get lock device
-        lock_device = get_device_by_name(client, lock_name)
+        # Get lock device using direct API call to avoid SDK issues
+        lock_device = find_device_by_name_direct(wyze_token, lock_name)
         if not lock_device:
             error_msg = f"Unable to find Wyze lock '{lock_name}' at {property_name}"
             logger.error(error_msg)
@@ -37,8 +37,8 @@ def get_battery_level(lock_config: Dict, property_name: str) -> Optional[int]:
         
         # Get device info/status using property list to get battery (P8)
         try:
-            # Use our custom function that calls the SDK method directly
-            property_list = get_device_property_list(client, lock_device.mac, lock_device.product.model)
+            # Use our direct API function
+            property_list = get_device_property_list(client, lock_device['mac'], lock_device['product_model'])
             
             if not property_list:
                 error_msg = f"Unable to get property list for Wyze lock {lock_name} at {property_name}"
@@ -68,14 +68,17 @@ def get_battery_level(lock_config: Dict, property_name: str) -> Optional[int]:
             logger.info(f"Retrieved battery level for Wyze lock {lock_name} at {property_name}: {battery_level}%")
             return battery_level
             
-        except AttributeError as e:
-            # Fallback: try the old method if get_device_property_list doesn't exist
-            error_msg = f"get_device_property_list method not available in Wyze SDK. Error: {str(e)}"
-            logger.warning(error_msg)
+        except Exception as e:
+            error_msg = f"Error getting property list for Wyze lock {lock_name} at {property_name}: {str(e)}"
+            logger.error(error_msg)
             
-            # Try alternative method
+            # Fallback: try the old method using SDK client (may not work but worth trying)
             try:
-                device_info = client.locks.info(device_mac=lock_device.mac, device_model=lock_device.product.model)
+                # Convert our device dict to the format expected by SDK calls
+                device_mac = lock_device['mac']
+                device_model = lock_device['product_model']
+                
+                device_info = client.locks.info(device_mac=device_mac, device_model=device_model)
                 if not device_info:
                     error_msg = f"Unable to get device info for Wyze lock {lock_name} at {property_name}"
                     logger.error(error_msg)
@@ -102,11 +105,6 @@ def get_battery_level(lock_config: Dict, property_name: str) -> Optional[int]:
                 error_msg = f"Error with fallback method for Wyze lock {lock_name} at {property_name}: {str(fallback_e)}"
                 logger.error(error_msg)
                 return None
-            
-        except Exception as e:
-            error_msg = f"Error getting property list for Wyze lock {lock_name} at {property_name}: {str(e)}"
-            logger.error(error_msg)
-            return None
             
     except Exception as e:
         error_msg = f"Error retrieving Wyze lock battery level for {lock_config.get('name', 'Unknown')} at {property_name}: {str(e)}"

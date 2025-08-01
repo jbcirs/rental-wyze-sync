@@ -2,6 +2,7 @@ from logger import Logger
 import os
 import time
 import requests
+import json
 from wyze_sdk import Client
 from wyze_sdk.errors import WyzeApiError
 from azure.identity import DefaultAzureCredential
@@ -9,13 +10,18 @@ from azure.keyvault.secrets import SecretClient
 from brands.wyze.error_mapping import get_error_message
 from slack_notify import send_slack_message
 from wyze_sdk.models.devices.thermostats import Thermostat, ThermostatFanMode, ThermostatSystemMode, ThermostatScenarioType
-from typing import Optional
+from typing import Optional, Dict, Any
 
 
 VAULT_URL = os.environ["VAULT_URL"]
 TIMEZONE = os.environ['TIMEZONE']
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
+
+# Wyze API Constants
+WYZE_API_BASE_URL = "https://api.wyzecam.com"
+SV_GET_DEVICE_PROPERTY_LIST = '1df2807c63254e16a06213323fe8dec8'
+SV_GET_OBJECT_LIST = '9319141212e548888ae85cc9b33e32a7'
 
 logger = Logger()
 
@@ -55,12 +61,103 @@ def get_wyze_token():
         logger.error(f"Wyze API Error: {str(e)}")
         return None
 
+def wyze_api_call(endpoint: str, token: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Make a direct API call to Wyze API.
+    
+    Args:
+        endpoint: API endpoint (e.g., '/app/v2/device/get_property_list')
+        token: Access token
+        data: Request payload
+        
+    Returns:
+        API response as dict, or None if failed
+    """
+    try:
+        url = f"{WYZE_API_BASE_URL}{endpoint}"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}"
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=30)
+        response.raise_for_status()
+        
+        result = response.json()
+        if result.get('code') == '1' and result.get('msg') == 'SUCCESS':
+            return result
+        else:
+            logger.error(f"Wyze API error: {result.get('msg', 'Unknown error')} (code: {result.get('code', 'unknown')})")
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request error calling Wyze API {endpoint}: {str(e)}")
+        return None
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error from Wyze API {endpoint}: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error calling Wyze API {endpoint}: {str(e)}")
+        return None
+
+def get_device_list_direct(token: str) -> Optional[list]:
+    """
+    Get list of all devices using direct API call.
+    
+    Args:
+        token: Access token
+        
+    Returns:
+        List of devices, or None if failed
+    """
+    try:
+        data = {
+            "sv": SV_GET_OBJECT_LIST
+        }
+        
+        response = wyze_api_call('/app/v2/home_page/get_object_list', token, data)
+        if response and 'data' in response:
+            return response['data'].get('device_list', [])
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting device list: {str(e)}")
+        return None
+
+def find_device_by_name_direct(token: str, device_name: str) -> Optional[Dict[str, Any]]:
+    """
+    Find a device by name using direct API call.
+    
+    Args:
+        token: Access token
+        device_name: Device nickname to search for
+        
+    Returns:
+        Device info dict, or None if not found
+    """
+    try:
+        devices = get_device_list_direct(token)
+        if not devices:
+            return None
+        
+        for device in devices:
+            if device.get('nickname') == device_name:
+                return device
+        
+        logger.error(f"Device '{device_name}' not found in device list")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error finding device by name: {str(e)}")
+        return None
+
 def get_device_property_list(client, device_mac: str, device_model: str):
     """
     Get device property list using direct API call.
     
     Args:
-        client: Wyze API client
+        client: Wyze API client (used to get token)
         device_mac: Device MAC address
         device_model: Device model
         
@@ -68,21 +165,23 @@ def get_device_property_list(client, device_mac: str, device_model: str):
         Dict containing property list response, or None if failed
     """
     try:
-        # Call the SDK method directly
-        response = client.get_device_property_list(mac=device_mac, model=device_model)
+        # Get token from the client if we don't have it
+        token = get_wyze_token()
+        if not token:
+            logger.error("Unable to get Wyze token for property list API call")
+            return None
+        
+        data = {
+            "device_mac": device_mac,
+            "device_model": device_model,
+            "sv": SV_GET_DEVICE_PROPERTY_LIST
+        }
+        
+        response = wyze_api_call('/app/v2/device/get_property_list', token, data)
         return response
-    except WyzeApiError as e:
-        error_code = getattr(e, 'code', 'unknown')
-        error_msg = f"Wyze API Error: Failed to get property list for device {device_mac}. Error code: {error_code}. {str(e)}"
-        logger.error(error_msg)
-        return None
-    except requests.exceptions.Timeout:
-        error_msg = f"Timeout Error: Connection to Wyze API timed out while getting property list for device {device_mac}."
-        logger.error(error_msg)
-        return None
+        
     except Exception as e:
-        error_msg = f"Unexpected Error: Failed to get property list for device {device_mac}. Error: {str(e)}"
-        logger.error(error_msg)
+        logger.error(f"Error getting device property list: {str(e)}")
         return None
 
 def get_device_by_name(client, name):
