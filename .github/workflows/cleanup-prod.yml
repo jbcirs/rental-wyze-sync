@@ -33,7 +33,7 @@ jobs:
       TF_VAR_openweathermap_key: ${{ secrets.OPENWEATHERMAP_KEY }}
       TF_VAR_app_name: 'rental-sync'
       TF_VAR_app_name_no_spaces: 'rentalsync'
-      TF_VAR_non_prod: 'true'
+      TF_VAR_non_prod: 'false'
 
     steps:
       - name: Checkout code

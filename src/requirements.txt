@@ -1,6 +1,6 @@
 # Azure Functions Core
 azure-functions>=1.18.0,<2.0.0
-azure-functions-worker>=1.2.0,<2.0.0
+azure-functions-worker>=1.1.9,<2.0.0
 
 # HTTP and API Libraries
 requests==2.32.3
@@ -19,7 +19,6 @@ azure-keyvault-secrets==4.9.0
 azure-data-tables==12.5.0
 
 # Application Insights and Telemetry
-azure-monitor-opentelemetry==1.6.0
 opencensus-ext-azure==1.1.13
 applicationinsights==0.11.10
 
