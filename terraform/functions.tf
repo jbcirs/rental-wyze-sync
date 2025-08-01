@@ -33,6 +33,8 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     TEST_PROPERTY_NAME = var.test_property_name
     WYZE_API_DELAY_SECONDS = var.wyze_api_delay_seconds
     SMARTTHINGS_API_DELAY_SECONDS = var.smartthings_api_delay_seconds
+    LOCK_CODE_ADD_MAX_ATTEMPTS = var.lock_code_add_max_attempts
+    LOCK_CODE_VERIFY_MAX_ATTEMPTS = var.lock_code_verify_max_attempts
     LIGHT_VERIFY_MAX_ATTEMPTS = var.light_verify_max_attempts
     STORAGE_ACCOUNT_NAME = azurerm_storage_account.storage.name
     ALWAYS_SEND_SLACK_SUMMARY = var.always_send_slack_summary
