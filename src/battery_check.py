@@ -5,7 +5,8 @@ import os
 from datetime import datetime
 import pytz
 from battery_monitor import get_all_lock_battery_levels, send_property_battery_report
-from hospitable import get_hospitable_properties
+from sync import active_property
+from devices import Devices
 from logger import Logger
 
 logger = Logger()
@@ -23,12 +24,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         timezone = pytz.timezone(timezone_str)
         current_time = datetime.now(timezone)
         
-        # Get all properties from Hospitable
-        properties = get_hospitable_properties()
+        # Get all properties from Azure Table Storage configuration
+        properties = active_property([Devices.LOCKS])
         if not properties:
-            logger.error("No properties found from Hospitable")
+            logger.error("No properties with lock configurations found")
             return func.HttpResponse(
-                json.dumps({"error": "No properties found"}),
+                json.dumps({"error": "No properties with lock configurations found"}),
                 status_code=500,
                 mimetype="application/json"
             )
@@ -40,15 +41,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         # First pass: Collect all battery data
         for property_data in properties:
             try:
-                property_name = property_data.get('propertyName', 'Unknown Property')
+                property_name = property_data.get('PartitionKey', 'Unknown Property')
                 
                 # Check if property has lock configurations
-                if 'locks' not in property_data or not property_data['locks']:
+                if 'Locks' not in property_data or not property_data['Locks']:
                     logger.debug(f"No locks configured for property {property_name}")
                     continue
                 
-                # Parse lock configurations if it's a JSON string
-                lock_configs = property_data['locks']
+                # Parse lock configurations - Azure Table Storage stores them as JSON strings
+                lock_configs = property_data['Locks']
                 if isinstance(lock_configs, str):
                     try:
                         lock_configs = json.loads(lock_configs)
@@ -60,7 +61,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 
                 # Parse BrandSettings for SmartThings location
                 brand_settings = None
-                if 'BrandSettings' in property_data:
+                if 'BrandSettings' in property_data and property_data['BrandSettings']:
                     brand_settings_raw = property_data['BrandSettings']
                     if isinstance(brand_settings_raw, str):
                         try:
@@ -92,7 +93,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 logger.info(f"Battery data collected for {property_name}: {len(battery_data)} locks, {low_battery_count} low battery, {warning_count} warnings, {len(errors)} errors")
                 
             except Exception as e:
-                error_msg = f"Error processing property {property_data.get('propertyName', 'Unknown')}: {str(e)}"
+                error_msg = f"Error processing property {property_data.get('PartitionKey', 'Unknown')}: {str(e)}"
                 logger.error(error_msg)
                 total_errors.append(error_msg)
                 continue
