@@ -71,11 +71,11 @@ else:
 # Conditionally register timer function only in production
 if not NON_PROD:
     @app.function_name(name="TimerTriggerSync")
-    @app.timer_trigger(schedule="0 */5 * * * *",
+    @app.timer_trigger(schedule="0 */30 * * * *",
                   arg_name="mytimer",
                   run_on_startup=False)
     def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
-        """Main timer function that processes reservations every 5 minutes - PRODUCTION ONLY"""
+        """Main timer function that processes reservations every 30 minutes - PRODUCTION ONLY"""
         logging.info("=== TimerTriggerSync function is being registered ===")
 
         # Log timer trigger details for debugging

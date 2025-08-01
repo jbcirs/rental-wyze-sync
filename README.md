@@ -167,7 +167,7 @@ The following environment variables can be configured in your Terraform variable
 - `NON_PROD`: Set to true for non-production environments (default: false)
 - `LOCAL_DEVELOPMENT`: Set to true for local development (default: false)
 
-> **Note**: The scheduled timer function runs every 5 minutes **only in production environments** (`NON_PROD=false`). In non-production environments, the timer is completely disabled to prevent accidental executions. Use the HTTP trigger endpoints for manual testing in non-production.
+> **Note**: The scheduled timer function runs every 30 minutes **only in production environments** (`NON_PROD=false`). In non-production environments, the timer is completely disabled to prevent accidental executions. Use the HTTP trigger endpoints for manual testing in non-production.
 
 ### 7. Deploy the Azure Functions
 
@@ -399,7 +399,7 @@ Changes Made:
 
 You will get two Azure Functions:
 
-1. **5-Minute Timer Cron Job:** This function runs every 5 minutes and will message you only if there are actions taken. To always get a message, set `ALWAYS_SEND_SLACK_SUMMARY` to true.
+1. **5-Minute Timer Cron Job:** This function runs every 30 minutes and will message you only if there are actions taken. To always get a message, set `ALWAYS_SEND_SLACK_SUMMARY` to true.
 2. **HTTP Post Trigger:** This function can delete all guest codes. Use this URL:
    ```
    https://{{app-name}}-functions.azurewebsites.net/api/trigger_sync?delete_all_guest_codes=false
