@@ -14,30 +14,19 @@ logging.info("=== function_app.py starting to load ===")
 
 # Configure Application Insights if available
 try:
-    from opencensus.ext.azure.log_exporter import AzureLogHandler
     from applicationinsights import TelemetryClient
     
     # Get Application Insights connection string from environment
     app_insights_connection_string = os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING')
     app_insights_key = os.environ.get('APPINSIGHTS_INSTRUMENTATIONKEY')
     
-    if app_insights_connection_string:
-        # Configure logging to send to Application Insights
-        logger = logging.getLogger(__name__)
-        handler = AzureLogHandler(connection_string=app_insights_connection_string)
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-        
+    if app_insights_key:
         # Initialize telemetry client for custom metrics
-        if app_insights_key:
-            telemetry_client = TelemetryClient(app_insights_key)
-        else:
-            telemetry_client = None
-            
+        telemetry_client = TelemetryClient(app_insights_key)
         logging.info("Application Insights configured successfully")
     else:
         telemetry_client = None
-        logging.info("Application Insights not configured - connection string not found")
+        logging.info("Application Insights not configured - instrumentation key not found")
         
 except ImportError:
     telemetry_client = None

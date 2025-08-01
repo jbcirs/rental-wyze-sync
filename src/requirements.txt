@@ -1,28 +1,24 @@
 # Azure Functions Core
 azure-functions>=1.18.0,<2.0.0
-azure-functions-worker>=1.1.9,<2.0.0
 
-# HTTP and API Libraries
+# HTTP and API Libraries  
 requests==2.32.3
-fastapi==0.112.1
 
 # Device Integration SDKs
 wyze-sdk==2.2.0
 
 # Slack Integration
 slack_sdk==3.28.0
-slack-bolt==1.20.0
 
 # Azure Services
 azure-identity==1.23.0
 azure-keyvault-secrets==4.9.0
 azure-data-tables==12.5.0
 
-# Application Insights and Telemetry (simplified for compatibility)
+# Application Insights and Telemetry
 applicationinsights==0.11.10
 
 # Utilities and Dependencies
 cffi>=1.15.0
 pytz==2025.2
-json-log-formatter==1.0
 cryptography==43.0.3
