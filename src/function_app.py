@@ -71,12 +71,11 @@ else:
         except Exception as e:
             logging.error(f"Failed to initialize Key Vault client: {str(e)}")
             client = None
-
 @app.function_name(name="TimerTriggerSync")
-@app.timer_trigger(schedule="0 */10 * * * *", arg_name="mytimer", run_on_startup=False, use_monitor=True)
+@app.timer_trigger(schedule="0 */5 * * * *", arg_name="mytimer", run_on_startup=False, use_monitor=True)
 def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
-    """Main timer function that processes reservations every 10 minutes"""
-    
+    """Main timer function that processes reservations every 5 minutes"""
+
     # Log timer trigger details for debugging
     logging.info(f'=== Timer trigger fired ===')
     logging.info(f'Schedule info: {mytimer.schedule_status}')
