@@ -171,9 +171,10 @@ def check_temperature_alerts(thermostat_name: str, property_name: str, current_m
     alerts_sent = []
     alerts = temperature_config.get('alerts', {})
     
-    # Check if alerts are enabled (default to True if alerts are defined but enabled is not specified)
-    alerts_enabled = alerts.get('enabled', True) if alerts else False
-    logger.info(f"check_temperature_alerts: {thermostat_name} - alerts enabled: {alerts_enabled}")
+    # Check if alerts should be enabled - True if alerts section exists OR if any alert thresholds are defined
+    has_alert_thresholds = any(key in temperature_config for key in ['cool_below', 'cool_above', 'heat_below', 'heat_above'])
+    alerts_enabled = alerts.get('enabled', True) if (alerts or has_alert_thresholds) else False
+    logger.info(f"check_temperature_alerts: {thermostat_name} - alerts enabled: {alerts_enabled}, has_thresholds: {has_alert_thresholds}")
     
     if not alerts_enabled:
         logger.info(f"check_temperature_alerts: {thermostat_name} - alerts disabled, returning early")
@@ -184,10 +185,14 @@ def check_temperature_alerts(thermostat_name: str, property_name: str, current_m
     
     alert_messages = []
     
+    # Get alert thresholds - check both in alerts section and at temperature_config level
+    def get_threshold(key):
+        return alerts.get(key) or temperature_config.get(key)
+    
     # Check cooling temperature alerts
     if current_mode in ['cool', 'auto']:
-        cool_below = alerts.get('cool_below')
-        cool_above = alerts.get('cool_above')
+        cool_below = get_threshold('cool_below')
+        cool_above = get_threshold('cool_above')
         
         logger.info(f"check_temperature_alerts: {thermostat_name} - checking cool alerts: below={cool_below}, above={cool_above}")
         
@@ -203,8 +208,8 @@ def check_temperature_alerts(thermostat_name: str, property_name: str, current_m
     
     # Check heating temperature alerts
     if current_mode in ['heat', 'auto']:
-        heat_below = alerts.get('heat_below')
-        heat_above = alerts.get('heat_above')
+        heat_below = get_threshold('heat_below')
+        heat_above = get_threshold('heat_above')
         
         logger.info(f"check_temperature_alerts: {thermostat_name} - checking heat alerts: below={heat_below}, above={heat_above}")
         
