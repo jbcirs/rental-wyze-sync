@@ -39,7 +39,7 @@ def sync(light: dict, property_name: str, location: str, desired_state: bool) ->
     Returns:
         Tuple of (updates, errors) lists tracking successful and failed operations
     """
-    logger.info(f'Processing SmartThings {Device.LIGHTS.value} for {property_name}.')
+    logger.info(f'Processing SmartThings {Device.LIGHT.value} for {property_name}.')
     updates = []
     errors = []
 
@@ -59,7 +59,7 @@ def sync(light: dict, property_name: str, location: str, desired_state: bool) ->
         light_id = get_device_id_by_label(location_id, light_name)
 
         if light_id is None:
-            _handle_error(f"❓ Device Not Found: Unable to fetch {Device.LIGHTS.value} `{light_name}` at `{property_name}`. Please verify the device is online and correctly named.", errors)
+            _handle_error(f"❓ Device Not Found: Unable to fetch {Device.LIGHT.value} `{light_name}` at `{property_name}`. Please verify the device is online and correctly named.", errors)
             return updates, errors
 
         # Get current light state to check if update is needed
@@ -77,7 +77,7 @@ def sync(light: dict, property_name: str, location: str, desired_state: bool) ->
             # Try to set the light state with retry logic
             success = False
             for attempt in range(1, LIGHT_VERIFY_MAX_ATTEMPTS + 1):
-                logger.info(f"💡 Attempt {attempt} of {LIGHT_VERIFY_MAX_ATTEMPTS} to set {Device.LIGHTS.value} '{light_name}' to {state_desc}")
+                logger.info(f"💡 Attempt {attempt} of {LIGHT_VERIFY_MAX_ATTEMPTS} to set {Device.LIGHT.value} '{light_name}' to {state_desc}")
                 
                 # Use the existing switch function from smartthings.py
                 api_success = switch(light_id, desired_state)
@@ -90,17 +90,17 @@ def sync(light: dict, property_name: str, location: str, desired_state: bool) ->
                     new_state = get_current_light_state(light_id)
                     if new_state == desired_state:
                         success = True
-                        update_msg = f"💡 Updated {Device.LIGHTS.value} `{light_name}` at `{property_name}`: {prev_state_desc} → {state_desc}"
+                        update_msg = f"💡 Updated {Device.LIGHT.value} `{light_name}` at `{property_name}`: {prev_state_desc} → {state_desc}"
                         if attempt > 1:
                             update_msg += f" (verified on attempt {attempt})"
                         logger.info(update_msg)
-                        updates.append(f"{Device.LIGHTS.value} {property_name} - {light_name}: {state_desc}")
+                        updates.append(f"{Device.LIGHT.value} {property_name} - {light_name}: {state_desc}")
                         send_slack_message(update_msg)
                         break
                     else:
-                        logger.warning(f"⚠️ Verification failed for {Device.LIGHTS.value} '{light_name}' - state is {new_state}, expected {desired_state}")
+                        logger.warning(f"⚠️ Verification failed for {Device.LIGHT.value} '{light_name}' - state is {new_state}, expected {desired_state}")
                 else:
-                    logger.warning(f"⚠️ API call failed for {Device.LIGHTS.value} '{light_name}' attempt {attempt}")
+                    logger.warning(f"⚠️ API call failed for {Device.LIGHT.value} '{light_name}' attempt {attempt}")
                 
                 # Wait before retry if not the last attempt
                 if attempt < LIGHT_VERIFY_MAX_ATTEMPTS:
@@ -108,13 +108,13 @@ def sync(light: dict, property_name: str, location: str, desired_state: bool) ->
                     time.sleep(SMARTTHINGS_API_DELAY_SECONDS)
             
             if not success:
-                _handle_error(f"⚠️ Failed to update {Device.LIGHTS.value} `{light_name}` at `{property_name}` to {state_desc} after {LIGHT_VERIFY_MAX_ATTEMPTS} attempts", errors)
+                _handle_error(f"⚠️ Failed to update {Device.LIGHT.value} `{light_name}` at `{property_name}` to {state_desc} after {LIGHT_VERIFY_MAX_ATTEMPTS} attempts", errors)
         else:
             state_desc = "ON" if desired_state else "OFF"
-            logger.info(f"No update needed for {Device.LIGHTS.value} `{light_name}` at `{property_name}` - already {state_desc}")
+            logger.info(f"No update needed for {Device.LIGHT.value} `{light_name}` at `{property_name}` - already {state_desc}")
 
     except Exception as e:
-        _handle_error(f"❌ Unexpected Error in SmartThings {Device.LIGHTS.value} function for `{property_name}`: {str(e)}", errors)
+        _handle_error(f"❌ Unexpected Error in SmartThings {Device.LIGHT.value} function for `{property_name}`: {str(e)}", errors)
 
     return updates, errors
 

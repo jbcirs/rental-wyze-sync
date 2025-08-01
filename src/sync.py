@@ -218,7 +218,7 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
         logger.info("Reservation processing completed successfully")
 
     except Exception as e:
-        logger.error(f"Error in process_reservations: {str(e)}", exc_info=True)
+        logger.error(f"Error in process_reservations: {str(e)}")
         send_slack_message(f"Error in process_reservations: {str(e)}")
 
 def process_property_locks(

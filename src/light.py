@@ -93,7 +93,7 @@ def get_light_settings(light, location, reservations, current_time):
     Returns:
         Tuple of (light_state, change_state, errors)
     """
-    logger.info(f'Processing {Device.LIGHTS.value} reservations.')
+    logger.info(f'Processing {Device.LIGHT.value} reservations.')
     errors = []
     light_state = False
     change_state = False
@@ -153,9 +153,9 @@ def get_light_settings(light, location, reservations, current_time):
         return light_state, change_state, errors
 
     except Exception as e:
-        error = f"Error in {Device.LIGHTS.value} function: {str(e)}"
+        error = f"Error in {Device.LIGHT.value} function: {str(e)}"
         logger.error(error)
         errors.append(error)
-        send_slack_message(f"Error in {Device.LIGHTS.value} function: {str(e)}")
+        send_slack_message(f"Error in {Device.LIGHT.value} function: {str(e)}")
 
     return light_state, False, errors
