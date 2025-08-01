@@ -59,7 +59,7 @@ def get_comfortable_temperatures(mode, reservation=False, temperatures=None):
     if reservation:
         # More comfortable settings when guests are present
         default_temperatures = {
-            'heat': {'cool_temp': 78, 'heat_temp': 74},
+            'heat': {'cool_temp': 79, 'heat_temp': 74},
             'cool': {'cool_temp': 74, 'heat_temp': 68},
             'auto': {'cool_temp': 74, 'heat_temp': 69}
         }
