@@ -172,7 +172,8 @@ def check_temperature_alerts(thermostat_name: str, property_name: str, current_m
     alerts = temperature_config.get('alerts', {})
     
     # Check if alerts should be enabled - True if alerts section exists OR if any alert thresholds are defined
-    has_alert_thresholds = any(key in temperature_config for key in ['cool_below', 'cool_above', 'heat_below', 'heat_above'])
+    has_alert_thresholds = any(key in temperature_config for key in ['cool_below', 'cool_above', 'heat_below', 'heat_above']) or \
+                          any(key in alerts for key in ['cool_below', 'cool_above', 'heat_below', 'heat_above'])
     alerts_enabled = alerts.get('enabled', True) if (alerts or has_alert_thresholds) else False
     logger.info(f"check_temperature_alerts: {thermostat_name} - alerts enabled: {alerts_enabled}, has_thresholds: {has_alert_thresholds}")
     
