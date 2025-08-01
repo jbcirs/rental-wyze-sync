@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime
 import pytz
-from battery_monitor import get_all_lock_battery_levels, send_property_battery_report
+from lock_battery_monitor import get_all_lock_battery_levels, send_property_battery_report
 from sync import active_property
 from devices import Devices
 from logger import Logger
@@ -14,9 +14,9 @@ logger = Logger()
 def main(req: func.HttpRequest) -> func.HttpResponse:
     """
     Azure Function to monitor battery levels for locks across all properties.
-    Generates comprehensive battery reports with alerts and sends to Slack.
+    Generates comprehensive lock battery reports with alerts and sends to Slack.
     """
-    logger.info('Battery monitoring function triggered.')
+    logger.info('Lock battery monitoring function triggered.')
     
     try:
         # Get timezone

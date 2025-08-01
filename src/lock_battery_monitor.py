@@ -9,16 +9,16 @@ from slack_notify import send_slack_message
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 TIMEZONE = os.environ['TIMEZONE']
 
-# Default battery monitoring settings
-DEFAULT_BATTERY_THRESHOLD = 30  # Alert when battery is below 30%
-DEFAULT_BATTERY_WARNING_OFFSET = 15  # Warning when battery is within 15% above threshold
+# Default lock battery monitoring settings
+DEFAULT_BATTERY_THRESHOLD = 30  # Alert when lock battery is below 30%
+DEFAULT_BATTERY_WARNING_OFFSET = 15  # Warning when lock battery is within 15% above threshold
 
 logger = Logger()
 
-class BatteryMonitor:
+class LockBatteryMonitor:
     """
-    Battery monitoring system for SmartThings and Wyze locks.
-    Generates comprehensive battery reports and sends alerts for low batteries.
+    Lock battery monitoring system for SmartThings and Wyze locks.
+    Generates comprehensive lock battery reports and sends alerts for low batteries.
     """
     
     def get_all_battery_levels(self, lock_configs: List[Dict], property_name: str, all_brand_settings: Dict = None) -> Tuple[List[Dict], List[str]]:
@@ -217,13 +217,13 @@ class BatteryMonitor:
             return None
 
 
-# Global battery monitor instance
-battery_monitor = BatteryMonitor()
+# Global lock battery monitor instance
+lock_battery_monitor = LockBatteryMonitor()
 
 
 def get_all_lock_battery_levels(lock_configs: List[Dict], property_name: str, all_brand_settings: Dict = None) -> Tuple[List[Dict], List[str]]:
     """
-    Convenience function to get all battery levels for locks.
+    Convenience function to get all lock battery levels for locks.
     
     Args:
         lock_configs: List of lock configuration dictionaries
@@ -233,12 +233,12 @@ def get_all_lock_battery_levels(lock_configs: List[Dict], property_name: str, al
     Returns:
         Tuple of (battery_data, errors) - battery_data contains all lock info
     """
-    return battery_monitor.get_all_battery_levels(lock_configs, property_name, all_brand_settings)
+    return lock_battery_monitor.get_all_battery_levels(lock_configs, property_name, all_brand_settings)
 
 
 def send_property_battery_report(all_battery_data: List[Dict], property_name: str) -> bool:
     """
-    Convenience function to send battery report for a property.
+    Convenience function to send lock battery report for a property.
     
     Args:
         all_battery_data: List of battery data for all locks
@@ -247,4 +247,4 @@ def send_property_battery_report(all_battery_data: List[Dict], property_name: st
     Returns:
         bool: True if report was sent successfully, False otherwise
     """
-    return battery_monitor.send_battery_report(all_battery_data, property_name)
+    return lock_battery_monitor.send_battery_report(all_battery_data, property_name)

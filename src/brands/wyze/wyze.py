@@ -67,7 +67,7 @@ def get_device_by_name(client, name):
         Device object if found, None otherwise
     """
     try:
-        devices = client.list()
+        devices = client.devices.list()
         for device in devices:
             if device.nickname == name:
                 return device
