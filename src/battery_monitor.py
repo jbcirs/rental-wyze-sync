@@ -21,13 +21,14 @@ class BatteryMonitor:
     Generates comprehensive battery reports and sends alerts for low batteries.
     """
     
-    def get_all_battery_levels(self, lock_configs: List[Dict], property_name: str) -> Tuple[List[Dict], List[str]]:
+    def get_all_battery_levels(self, lock_configs: List[Dict], property_name: str, all_brand_settings: Dict = None) -> Tuple[List[Dict], List[str]]:
         """
         Get battery levels for all configured locks and generate comprehensive report.
         
         Args:
             lock_configs: List of lock configuration dictionaries
             property_name: Name of the property for logging purposes
+            all_brand_settings: Complete BrandSettings dictionary from property
             
         Returns:
             Tuple of (battery_data, errors) - battery_data contains all lock info
@@ -53,8 +54,17 @@ class BatteryMonitor:
                 # Calculate warning threshold (threshold + offset)
                 warning_threshold = battery_threshold + battery_warning_offset
                 
+                # Get brand-specific settings for this lock
+                brand_settings = None
+                if all_brand_settings and brand.lower() == 'smartthings':
+                    # Find SmartThings settings in all_brand_settings
+                    for brand_setting in all_brand_settings:
+                        if brand_setting.get('brand') == 'smartthings':
+                            brand_settings = brand_setting
+                            break
+                
                 # Get battery level based on brand
-                battery_level = self._get_battery_level(lock_config, property_name, brand)
+                battery_level = self._get_battery_level(lock_config, property_name, brand, brand_settings)
                 
                 lock_data = {
                     'name': lock_name,
@@ -172,7 +182,7 @@ class BatteryMonitor:
             logger.error(f"Failed to send battery report for {property_name}: {str(e)}")
             return False
     
-    def _get_battery_level(self, lock_config: Dict, property_name: str, brand: str) -> Optional[int]:
+    def _get_battery_level(self, lock_config: Dict, property_name: str, brand: str, brand_settings: Dict = None) -> Optional[int]:
         """
         Get battery level using brand-specific modules.
         
@@ -180,6 +190,7 @@ class BatteryMonitor:
             lock_config: Lock configuration dictionary
             property_name: Property name for logging
             brand: Lock brand (smartthings/wyze)
+            brand_settings: Brand-specific settings from BrandSettings (for SmartThings location)
             
         Returns:
             int: Battery level percentage, or None if unable to retrieve
@@ -187,7 +198,7 @@ class BatteryMonitor:
         try:
             if brand.lower() == 'smartthings':
                 from brands.smartthings.battery import get_battery_level
-                return get_battery_level(lock_config, property_name)
+                return get_battery_level(lock_config, property_name, brand_settings)
             elif brand.lower() == 'wyze':
                 from brands.wyze.battery import get_battery_level
                 return get_battery_level(lock_config, property_name)
@@ -210,18 +221,19 @@ class BatteryMonitor:
 battery_monitor = BatteryMonitor()
 
 
-def get_all_lock_battery_levels(lock_configs: List[Dict], property_name: str) -> Tuple[List[Dict], List[str]]:
+def get_all_lock_battery_levels(lock_configs: List[Dict], property_name: str, all_brand_settings: Dict = None) -> Tuple[List[Dict], List[str]]:
     """
     Convenience function to get all battery levels for locks.
     
     Args:
         lock_configs: List of lock configuration dictionaries
         property_name: Name of the property for logging purposes
+        all_brand_settings: Complete BrandSettings dictionary from property
         
     Returns:
         Tuple of (battery_data, errors) - battery_data contains all lock info
     """
-    return battery_monitor.get_all_battery_levels(lock_configs, property_name)
+    return battery_monitor.get_all_battery_levels(lock_configs, property_name, all_brand_settings)
 
 
 def send_property_battery_report(all_battery_data: List[Dict], property_name: str) -> bool:

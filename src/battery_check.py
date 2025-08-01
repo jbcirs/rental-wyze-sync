@@ -58,8 +58,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                         total_errors.append(error_msg)
                         continue
                 
+                # Parse BrandSettings for SmartThings location
+                brand_settings = None
+                if 'BrandSettings' in property_data:
+                    brand_settings_raw = property_data['BrandSettings']
+                    if isinstance(brand_settings_raw, str):
+                        try:
+                            brand_settings = json.loads(brand_settings_raw)
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"Invalid BrandSettings JSON for property {property_name}: {str(e)}")
+                    else:
+                        brand_settings = brand_settings_raw
+                
                 # Get battery levels for this property
-                battery_data, errors = get_all_lock_battery_levels(lock_configs, property_name)
+                battery_data, errors = get_all_lock_battery_levels(lock_configs, property_name, brand_settings)
                 
                 # Collect data and errors
                 all_battery_data.extend(battery_data)

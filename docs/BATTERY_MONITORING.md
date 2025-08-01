@@ -42,42 +42,59 @@ For a lock with `battery_threshold: 25` and `battery_warning_offset: 15`:
 
 ### Basic Lock Configuration (Current)
 ```json
-[
-  {
-    "brand": "smartthings",
-    "name": "Front Door Lock"
-  },
-  {
-    "brand": "smartthings", 
-    "name": "Back Door Lock"
-  }
-]
+{
+  "locks": [
+    {
+      "brand": "smartthings",
+      "name": "Front Door Lock"
+    },
+    {
+      "brand": "smartthings", 
+      "name": "Back Door Lock"
+    }
+  ],
+  "BrandSettings": [
+    {
+      "brand": "smartthings",
+      "location": "Main House"
+    }
+  ]
+}
 ```
 
 ### Enhanced Lock Configuration with Battery Monitoring
 ```json
-[
-  {
-    "brand": "smartthings",
-    "name": "Front Door Lock",
-    "location": "Main House",
-    "battery_threshold": 25,
-    "battery_warning_offset": 15
-  },
-  {
-    "brand": "smartthings",
-    "name": "Back Door Lock", 
-    "location": "Main House",
-    "battery_threshold": 30,
-    "battery_warning_offset": 20
-  },
-  {
-    "brand": "wyze",
-    "name": "Side Gate Lock",
-    "battery_threshold": 20,
-    "battery_warning_offset": 15
-  }
-]
+{
+  "locks": [
+    {
+      "brand": "smartthings",
+      "name": "Front Door Lock",
+      "battery_threshold": 25,
+      "battery_warning_offset": 15
+    },
+    {
+      "brand": "smartthings",
+      "name": "Back Door Lock", 
+      "battery_threshold": 30,
+      "battery_warning_offset": 20
+    },
+    {
+      "brand": "wyze",
+      "name": "Side Gate Lock",
+      "battery_threshold": 20,
+      "battery_warning_offset": 15
+    }
+  ],
+  "BrandSettings": [
+    {
+      "brand": "smartthings",
+      "location": "Main House"
+    },
+    {
+      "brand": "wyze"
+    }
+  ]
+}
 ```
 
 ## Configuration Parameters
@@ -87,7 +104,7 @@ For a lock with `battery_threshold: 25` and `battery_warning_offset: 15`:
 - **`name`** (string): The exact name of the lock device as configured in SmartThings or Wyze
 
 ### SmartThings Specific
-- **`location`** (string): Required for SmartThings locks - the location name where the lock is configured
+- **`location`** (string): Required for SmartThings - specified in BrandSettings, not individual lock configurations. This is the location/hub name where all SmartThings locks for this property are configured.
 
 ### Battery Monitoring Parameters (Optional)
 - **`battery_threshold`** (integer): Battery percentage threshold that triggers alerts

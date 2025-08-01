@@ -4,25 +4,28 @@ from brands.smartthings.smartthings import find_location_by_name, get_device_id_
 
 logger = Logger()
 
-def get_battery_level(lock_config: Dict, property_name: str) -> Optional[int]:
+def get_battery_level(lock_config: Dict, property_name: str, brand_settings: Dict = None) -> Optional[int]:
     """
     Get battery level for a SmartThings lock.
     
     Args:
         lock_config: Lock configuration dictionary
         property_name: Property name for logging
+        brand_settings: SmartThings brand settings containing location
         
     Returns:
         int: Battery level percentage, or None if unable to retrieve
     """
     try:
         lock_name = lock_config['name']
-        location = lock_config.get('location')
         
-        if not location:
-            error_msg = f"No location specified for SmartThings lock {lock_name} at {property_name}"
+        # Get location from brand_settings, not from individual lock config
+        if not brand_settings or 'location' not in brand_settings:
+            error_msg = f"No SmartThings location specified in BrandSettings for lock {lock_name} at {property_name}"
             logger.error(error_msg)
             return None
+            
+        location = brand_settings['location']
         
         # Get location ID
         location_id = find_location_by_name(location)
