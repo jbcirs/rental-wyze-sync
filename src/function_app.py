@@ -8,6 +8,10 @@ import azure.functions as func
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
+# Force logging to start immediately
+logging.basicConfig(level=logging.INFO)
+logging.info("=== function_app.py starting to load ===")
+
 # Configure Application Insights if available
 try:
     from opencensus.ext.azure.log_exporter import AzureLogHandler
@@ -40,6 +44,9 @@ except ImportError:
     logging.warning("Application Insights packages not available")
 
 app = func.FunctionApp()
+
+# Log that the FunctionApp was created
+logging.info("=== FunctionApp instance created ===")
 
 # Initialize execution tracking dict
 last_execution = {}
@@ -78,6 +85,7 @@ else:
               run_on_startup=False)
 def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
     """Main timer function that processes reservations every 5 minutes"""
+    logging.info("=== TimerTriggerSync function is being registered ===")
 
     # Log timer trigger details for debugging
     logging.info(f'=== Timer trigger fired ===')
@@ -126,6 +134,7 @@ def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
 @app.route(route="health", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.ANONYMOUS)
 def health_check(req: func.HttpRequest) -> func.HttpResponse:
     """Simple health check endpoint to verify function app is working"""
+    logging.info("=== HealthCheck function is being registered ===")
     logging.info('Health check requested')
     
     health_info = {
@@ -151,4 +160,15 @@ def health_check(req: func.HttpRequest) -> func.HttpResponse:
         mimetype="application/json",
         status_code=200
     )
+
+# Simple test function
+@app.function_name(name="SimpleTest")
+@app.route(route="test")
+def simple_test(req: func.HttpRequest) -> func.HttpResponse:
+    """Ultra simple test function"""
+    logging.info("=== SimpleTest function executed ===")
+    return func.HttpResponse("Hello from Azure Functions!", status_code=200)
+
+# Log that function_app.py has loaded successfully
+logging.info("=== function_app.py loaded successfully with functions registered ===")
 
