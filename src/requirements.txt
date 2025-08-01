@@ -18,8 +18,7 @@ azure-identity==1.23.0
 azure-keyvault-secrets==4.9.0
 azure-data-tables==12.5.0
 
-# Application Insights and Telemetry
-opencensus-ext-azure==1.1.13
+# Application Insights and Telemetry (simplified for compatibility)
 applicationinsights==0.11.10
 
 # Utilities and Dependencies
