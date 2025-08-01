@@ -389,7 +389,19 @@ def process_property_thermostats(
                     temperature_config = temp_config
                     break
             
-            # Check if we should process based on frequency setting
+            # Check temperature alerts FIRST - alerts run every day during reservations regardless of frequency
+            # This helps catch guests setting extreme temperatures that could run up costs
+            if temperature_config and temperature_config.get('alerts'):
+                logger.info(f"Checking temperature alerts for {thermostat['name']} at {property_name} (runs daily during reservations)")
+                alerts_sent = check_temperature_alerts(
+                    thermostat['name'], property_name, mode, cool_temp, heat_temp, temperature_config
+                )
+                if alerts_sent:
+                    logger.info(f"Temperature alerts sent for {thermostat['name']} at {property_name}: {len(alerts_sent)} alerts")
+                else:
+                    logger.info(f"No temperature alerts triggered for {thermostat['name']} at {property_name}")
+            
+            # Check if we should process thermostat updates based on frequency setting
             if temperature_config and not should_process_thermostat_for_frequency(
                 temperature_config, reservation_start_date, current_time.date()
             ):
@@ -407,6 +419,9 @@ def process_property_thermostats(
                     logger.info(f"Temperature alerts {'enabled' if alerts_enabled else 'disabled'} for {thermostat['name']}")
             else:
                 logger.warning(f"No temperature configuration found for mode '{mode}' in thermostat {thermostat['name']} at {property_name}")
+        else:
+            # No reservation - no alerts needed
+            logger.info(f"No active reservation for {thermostat['name']} at {property_name} - skipping alert checks")
 
         # Apply settings based on thermostat brand
         if thermostat['brand'] == WYZE:
@@ -425,22 +440,6 @@ def process_property_thermostats(
         # Handle freeze protection override
         if freeze_protection:
             updates.append(f"Freeze protection override for {property_name} - {thermostat['name']}")
-        
-        # Check temperature alerts for reservation-only configurations
-        logger.info(f"Alert check conditions: has_reservation={has_reservation}, temperature_config exists={temperature_config is not None}, alerts in config={temperature_config.get('alerts') if temperature_config else None}")
-        
-        if has_reservation and temperature_config and temperature_config.get('alerts'):
-            logger.info(f"Checking temperature alerts for {thermostat['name']} at {property_name}")
-            alerts_sent = check_temperature_alerts(
-                thermostat['name'], property_name, mode, cool_temp, heat_temp, temperature_config
-            )
-            if alerts_sent:
-                # Log that alerts were sent but don't add to updates since these are alerts, not changes
-                logger.info(f"Temperature alerts sent for {thermostat['name']} at {property_name}: {len(alerts_sent)} alerts")
-            else:
-                logger.info(f"No temperature alerts triggered for {thermostat['name']} at {property_name}")
-        else:
-            logger.info(f"Skipping temperature alert check for {thermostat['name']} - conditions not met")
         
         property_updates.extend(updates)
         property_errors.extend(errors)

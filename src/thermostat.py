@@ -155,6 +155,7 @@ def should_process_thermostat_for_frequency(temperature_config: dict, reservatio
 def check_temperature_alerts(thermostat_name: str, property_name: str, current_mode: str, current_cool_temp: int, current_heat_temp: int, temperature_config: dict) -> list:
     """
     Check if current thermostat settings violate alert thresholds and send Slack notifications.
+    This helps identify when guests set extreme temperatures that could increase energy costs.
     
     Args:
         thermostat_name: Name of the thermostat
@@ -170,8 +171,8 @@ def check_temperature_alerts(thermostat_name: str, property_name: str, current_m
     alerts_sent = []
     alerts = temperature_config.get('alerts', {})
     
-    # Check if alerts are enabled (default to True if not specified)
-    alerts_enabled = alerts.get('enabled', True)
+    # Check if alerts are enabled (default to True if alerts are defined but enabled is not specified)
+    alerts_enabled = alerts.get('enabled', True) if alerts else False
     logger.info(f"check_temperature_alerts: {thermostat_name} - alerts enabled: {alerts_enabled}")
     
     if not alerts_enabled:
