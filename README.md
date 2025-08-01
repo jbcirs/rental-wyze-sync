@@ -29,7 +29,17 @@ This Azure Functions application automatically synchronizes smart home devices f
 - **Template System**: Easy addition of new thermostat brands using established patterns
 - **Comprehensive Error Handling**: Graceful degradation and robust retry logic
 
-### 📊 **Application Insights Integration**
+### � **Battery Monitoring System**
+
+- **Daily Automated Reports**: Comprehensive battery status reports sent every morning at 8 AM
+- **Smart Alert System**: Low battery alerts prominently displayed at the top of reports
+- **Multi-Brand Support**: Works with both SmartThings and Wyze locks
+- **Configurable Thresholds**: Set custom battery alert levels per lock (default: 30%)
+- **Rich Slack Reports**: Color-coded status with detailed battery information
+- **Manual Trigger**: HTTP endpoint for on-demand battery checks
+- **Complete Status Overview**: Shows all locks with battery percentages, not just alerts
+
+### �📊 **Application Insights Integration**
 
 - Comprehensive telemetry tracking for all function executions
 - Custom metrics for execution times and performance monitoring
@@ -230,6 +240,59 @@ Each device (lock, light, thermostat) should be added to the Azure Storage Table
 - Lights: List of SmartThings lights with time-based controls (see below)
 - Thermostats: List of thermostats with full configuration (see below)
 
+#### Lock Configuration
+
+Lock configurations include both access code management and battery monitoring capabilities. The system automatically creates guest codes during reservations and monitors battery levels with daily reports.
+
+##### Lock Configuration Fields
+
+- `brand`: Lock brand ("smartthings" or "wyze")
+- `name`: The exact device name as it appears in the respective platform
+- `location`: Required for SmartThings locks - the location name where the lock is configured
+- `battery_threshold`: Battery percentage below which alerts are triggered (default: 30%, optional)
+
+##### Lock Examples
+
+```json
+"Locks": [
+  {
+    "brand": "smartthings",
+    "name": "Front Door Lock",
+    "location": "Main House",
+    "battery_threshold": 25
+  },
+  {
+    "brand": "wyze",
+    "name": "Back Door Lock",
+    "battery_threshold": 20
+  }
+]
+```
+
+##### Battery Monitoring Features
+
+- **Daily Reports**: Comprehensive battery status sent to Slack every morning at 8 AM
+- **Smart Alerts**: Low battery locks highlighted at the top of reports
+- **Manual Checks**: Available via HTTP endpoint `/api/battery_monitor`
+- **Multi-Property Support**: Individual reports generated for each property
+- **Rich Formatting**: Color-coded status with detailed battery information
+
+##### Battery Report Example
+
+```
+🚨 **LOW BATTERY ALERTS for Paradise Cove** 🚨
+⚠️ SmartThings lock `Front Door Lock`: **15%** (threshold: 25%)
+
+🔋 **Battery Status Report for Paradise Cove**
+Report generated: 2025-08-01 08:00:15
+
+🔴 SmartThings `Front Door Lock`: 15% (LOW)
+🟢 SmartThings `Back Door Lock`: 65% (OK)
+🟢 Wyze `Pool Gate Lock`: 78% (OK)
+
+Summary: 3 locks total, 1 with low battery
+```
+
 #### Light Configuration
 
 SmartThings lights can be controlled based on time schedules, sunrise/sunset calculations, and reservation status. The system includes retry logic and comprehensive Slack notifications.
@@ -390,14 +453,37 @@ Changes Made:
 
 ## Azure Functions
 
-You will get two Azure Functions:
+The system includes the following Azure Functions:
 
-1. **5-Minute Timer Cron Job:** This function runs every 30 minutes and will message you only if there are actions taken. To always get a message, set `ALWAYS_SEND_SLACK_SUMMARY` to true.
-2. **HTTP Post Trigger:** This function can delete all guest codes. Use this URL:
-   ```
-   https://{{app-name}}-functions.azurewebsites.net/api/trigger_sync?delete_all_guest_codes=false
-   ```
-   All guest codes will be displayed with the word Guest, first name, and start date of reservation, e.g., `Guest Robert 20240412`.
+### Timer-Based Functions
+
+1. **Main Sync Timer (30-minute intervals):** Runs every 30 minutes in production to synchronize locks, lights, and thermostats based on reservations. Messages are sent to Slack only when actions are taken (unless `ALWAYS_SEND_SLACK_SUMMARY` is true).
+
+2. **Battery Monitor Timer (Daily at 8 AM):** Generates comprehensive battery reports for all locks across all properties. Reports include low battery alerts and complete status overview.
+
+### HTTP Trigger Functions
+
+1. **Sync Triggers:** Manual sync endpoints for specific device types:
+   - `/api/trigger_sync_locks` - Sync lock codes only
+   - `/api/trigger_sync_lights` - Sync light controls only  
+   - `/api/trigger_sync_thermostats` - Sync thermostat settings only
+
+2. **Battery Monitor:** `/api/battery_monitor` - Manual battery level check and report generation
+
+3. **Property List:** `/api/property_list` - Get list of all configured properties
+
+4. **Health Check:** `/api/health` - System status and configuration verification
+
+### Function Parameters
+
+**Lock Sync Functions:**
+```
+POST /api/trigger_sync_locks?delete_all_guest_codes=false
+```
+Set `delete_all_guest_codes=true` to remove all existing guest codes before creating new ones.
+
+**Guest Code Format:**
+All guest codes are displayed as: `Guest {FirstName} {YYYYMMDD}` (e.g., `Guest Robert 20240412`)
 
 ## Runtime Requirements
 
@@ -520,3 +606,12 @@ chmod +x ./scripts/<filename>.sh
 python3 -m venv .venv
 . .venv/bin/activate
 ```
+
+## Documentation
+
+For detailed configuration and usage information, see:
+
+- **[Battery Monitoring System](docs/BATTERY_MONITORING.md)** - Complete guide to battery monitoring configuration, reports, and troubleshooting
+- **[Enhanced Lock Configuration Examples](examples/ENHANCED_LOCK_CONFIG.md)** - Practical examples for implementing battery monitoring on existing locks
+
+These documents provide step-by-step instructions for configuring battery monitoring thresholds, understanding Slack report formats, and troubleshooting common issues.

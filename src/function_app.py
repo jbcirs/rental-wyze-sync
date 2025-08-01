@@ -138,7 +138,9 @@ def health_check(req: func.HttpRequest) -> func.HttpResponse:
         "Sync_Locks", 
         "Sync_Lights", 
         "Sync_Thermostats", 
-        "Property_List"
+        "Property_List",
+        "Battery_Monitor",
+        "Battery_Monitor_Timer"
     ]
     
     # Add timer function only in production
@@ -160,7 +162,8 @@ def health_check(req: func.HttpRequest) -> func.HttpResponse:
             "sync_locks": "POST /api/trigger_sync_locks",
             "sync_lights": "POST /api/trigger_sync_lights", 
             "sync_thermostats": "POST /api/trigger_sync_thermostats",
-            "property_list": "GET /api/property_list"
+            "property_list": "GET /api/property_list",
+            "battery_monitor": "GET|POST /api/battery_monitor"
         }
     }
     
@@ -300,5 +303,40 @@ def property_list(req: func.HttpRequest) -> func.HttpResponse:
     except Exception as e:
         logging.error(f"Error executing function: {str(e)}")
         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+
+@app.function_name(name="Battery_Monitor")
+@app.route(route="battery_monitor", methods=[func.HttpMethod.GET, func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
+def battery_monitor_http(req: func.HttpRequest) -> func.HttpResponse:
+    """HTTP trigger for battery monitoring function."""
+    logging.info('HTTP trigger function processed a request for battery monitoring.')
+    
+    try:
+        from battery_check import main as battery_main
+        return battery_main(req)
+    except Exception as e:
+        logging.error(f"Error executing battery monitoring function: {str(e)}")
+        return func.HttpResponse(f"Error executing battery monitoring function: {str(e)}", status_code=500)
+
+@app.function_name(name="Battery_Monitor_Timer")
+@app.schedule(schedule="0 0 8 * * *", arg_name="myTimer", run_on_startup=False,
+              use_monitor=False) 
+def battery_monitor_timer(myTimer: func.TimerRequest) -> None:
+    """Timer trigger for battery monitoring - runs daily at 8 AM."""
+    logging.info('Timer trigger function executed for battery monitoring.')
+    
+    try:
+        from battery_check import main as battery_main
+        # Create a fake HTTP request for the main function
+        fake_req = func.HttpRequest(
+            method='GET',
+            body=b'',
+            url='',
+            params={},
+            headers={}
+        )
+        response = battery_main(fake_req)
+        logging.info(f"Battery monitoring completed with status: {response.status_code}")
+    except Exception as e:
+        logging.error(f"Error executing battery monitoring timer function: {str(e)}")
 
 
