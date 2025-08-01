@@ -115,164 +115,36 @@ def timer_trigger_sync(mytimer: func.TimerRequest) -> None:
         if telemetry_client:
             telemetry_client.track_exception()
             telemetry_client.track_event('TimerTriggerSync_Failed', {'error': str(e)})
-
-# @app.function_name(name="Sync_Locks")
-# @app.route(route="trigger_sync_locks", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
-# def http_trigger_sync_locks(req: func.HttpRequest) -> func.HttpResponse:
-#     logging.info('HTTP trigger function processed a request.')
     
-#     if telemetry_client:
-#         telemetry_client.track_event('HttpTriggerSync_Locks_Started')
+    logging.info('=== Timer trigger completed ===')
 
-#     logging.info(f"req.params: {req.params}")
-#     delete_all_guest_codes = req.params.get('delete_all_guest_codes', 'false').lower() == 'true'
-#     logging.info(f"delete_all_guest_codes: {delete_all_guest_codes}")
-
-#     if not delete_all_guest_codes:
-#         try:
-#             req_body = req.get_json()
-#             logging.info(f"req_body: {req_body}")
-#             delete_all_guest_codes = req_body.get('delete_all_guest_codes', 'false').lower() == 'true'
-#             logging.info(f"delete_all_guest_codes: {delete_all_guest_codes}")
-#         except ValueError:
-#             logging.warning('Invalid JSON in request body.')
-
-#     try:
-#         execution_start = time.time()
-#         from sync import process_reservations
-#         process_reservations([Devices.LOCKS], delete_all_guest_codes)
-#         execution_time = time.time() - execution_start
-        
-#         if telemetry_client:
-#             telemetry_client.track_metric('HttpSync_Locks_ExecutionTime', execution_time)
-#             telemetry_client.track_event('HttpTriggerSync_Locks_Completed', 
-#                                        {'execution_time_seconds': execution_time, 
-#                                         'delete_all_guest_codes': delete_all_guest_codes})
-        
-#         return func.HttpResponse("Function executed successfully.", status_code=200)
-#     except Exception as e:
-#         logging.error(f"Error executing function: {str(e)}")
-#         if telemetry_client:
-#             telemetry_client.track_exception()
-#             telemetry_client.track_event('HttpTriggerSync_Locks_Failed', {'error': str(e)})
-#         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+@app.function_name(name="HealthCheck")
+@app.route(route="health", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.ANONYMOUS)
+def health_check(req: func.HttpRequest) -> func.HttpResponse:
+    """Simple health check endpoint to verify function app is working"""
+    logging.info('Health check requested')
     
-# @app.function_name(name="Sync_Lights")
-# @app.route(route="trigger_sync_lights", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
-# def http_trigger_sync_lights(req: func.HttpRequest) -> func.HttpResponse:
-#     logging.info('HTTP trigger function processed a request.')
+    health_info = {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "environment": {
+            "NON_PROD": NON_PROD,
+            "LOCAL_DEVELOPMENT": LOCAL_DEVELOPMENT,
+            "python_version": os.sys.version.split()[0],
+        },
+        "functions": ["TimerTriggerSync", "HealthCheck"],
+        "vault_configured": bool(VAULT_URL)
+    }
     
-#     if telemetry_client:
-#         telemetry_client.track_event('HttpTriggerSync_Lights_Started')
-
-#     try:
-#         execution_start = time.time()
-#         from sync import process_reservations
-#         process_reservations([Devices.LIGHTS])
-#         execution_time = time.time() - execution_start
-        
-#         if telemetry_client:
-#             telemetry_client.track_metric('HttpSync_Lights_ExecutionTime', execution_time)
-#             telemetry_client.track_event('HttpTriggerSync_Lights_Completed', {'execution_time_seconds': execution_time})
-        
-#         return func.HttpResponse("Function executed successfully.", status_code=200)
-#     except Exception as e:
-#         logging.error(f"Error executing function: {str(e)}")
-#         if telemetry_client:
-#             telemetry_client.track_exception()
-#             telemetry_client.track_event('HttpTriggerSync_Lights_Failed', {'error': str(e)})
-#         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
+    if telemetry_client:
+        telemetry_client.track_event('HealthCheck_Requested')
+        health_info["application_insights"] = "configured"
+    else:
+        health_info["application_insights"] = "not_configured"
     
-# @app.function_name(name="Sync_Thermostats")
-# @app.route(route="trigger_sync_thermostats", methods=[func.HttpMethod.POST], auth_level=func.AuthLevel.FUNCTION)
-# def http_trigger_sync_thermostats(req: func.HttpRequest) -> func.HttpResponse:
-#     logging.info('HTTP trigger function processed a request.')
-    
-#     if telemetry_client:
-#         telemetry_client.track_event('HttpTriggerSync_Thermostats_Started')
-
-#     try:
-#         execution_start = time.time()
-#         from sync import process_reservations
-#         process_reservations([Devices.THERMOSTATS])
-#         execution_time = time.time() - execution_start
-        
-#         if telemetry_client:
-#             telemetry_client.track_metric('HttpSync_Thermostats_ExecutionTime', execution_time)
-#             telemetry_client.track_event('HttpTriggerSync_Thermostats_Completed', {'execution_time_seconds': execution_time})
-        
-#         return func.HttpResponse("Function executed successfully.", status_code=200)
-#     except Exception as e:
-#         logging.error(f"Error executing function: {str(e)}")
-#         if telemetry_client:
-#             telemetry_client.track_exception()
-#             telemetry_client.track_event('HttpTriggerSync_Thermostats_Failed', {'error': str(e)})
-#         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
-    
-# @app.function_name(name="Property_List")
-# @app.route(route="property_list", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.FUNCTION)
-# def property_list(req: func.HttpRequest) -> func.HttpResponse:
-#     logging.info('HTTP trigger function processed a request get_property_list.')
-
-#     try:
-#         from hospitable import authenticate_hospitable, get_properties
-#         token = authenticate_hospitable()
-#         if not token:
-#             logging.info("Unable to authenticate with Hospitable API.")
-#             return
-
-#         properties = get_properties(token)
-#         if not properties:
-#             logging.info("Unable to fetch properties from Hospitable API.")
-#             return
-        
-#         property_names = []
-        
-#         for prop in properties:
-#             property_names.append(prop['name'])
-
-#         return func.HttpResponse(
-#             json.dumps(property_names),
-#             mimetype="application/json",
-#             status_code=200
-#         )
-
-#     except Exception as e:
-#         logging.error(f"Error executing function: {str(e)}")
-#         return func.HttpResponse(f"Error executing function: {str(e)}", status_code=500)
-
-# @app.function_name(name="HealthCheck")
-# @app.route(route="health", methods=[func.HttpMethod.GET], auth_level=func.AuthLevel.ANONYMOUS)
-# def health_check(req: func.HttpRequest) -> func.HttpResponse:
-#     """Simple health check endpoint to verify function app is working"""
-#     logging.info('Health check requested')
-    
-#     health_info = {
-#         "status": "healthy",
-#         "timestamp": datetime.utcnow().isoformat(),
-#         "environment": {
-#             "NON_PROD": NON_PROD,
-#             "LOCAL_DEVELOPMENT": LOCAL_DEVELOPMENT,
-#             "python_version": os.sys.version,
-#         },
-#         "functions": [
-#             "TimerTriggerSync",
-#             "Sync_Locks", 
-#             "Sync_Lights",
-#             "Sync_Thermostats",
-#             "Property_List"
-#         ]
-#     }
-    
-#     if telemetry_client:
-#         telemetry_client.track_event('HealthCheck_Requested')
-#         health_info["application_insights"] = "configured"
-#     else:
-#         health_info["application_insights"] = "not_configured"
-    
-#     return func.HttpResponse(
-#         json.dumps(health_info, indent=2),
-#         mimetype="application/json",
-#         status_code=200
-#     )
+    return func.HttpResponse(
+        json.dumps(health_info, indent=2),
+        mimetype="application/json",
+        status_code=200
+    )
 
