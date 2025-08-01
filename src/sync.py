@@ -119,7 +119,13 @@ def get_settings(property: Dict[str, Any], brand: str) -> Dict[str, Any]:
     Returns:
         Brand-specific settings dictionary or None if not found
     """
-    brand_settings = json.loads(property["BrandSettings"])
+    try:
+        brand_settings = json.loads(property["BrandSettings"])
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in BrandSettings field for property {property.get('PartitionKey', 'Unknown')}: {e}")
+        logger.error(f"BrandSettings data: {property['BrandSettings']}")
+        return None
+        
     for item in brand_settings:
         if item['brand'] == brand:
             return item
@@ -178,39 +184,52 @@ def process_reservations(devices: List[Devices] = [Devices.LOCKS], delete_all_gu
         
         # Process each property
         for property in table_properties:
-            # Initialize tracking lists for this property
-            property_deletions, property_updates, property_additions, property_errors = [], [], [], []
-            property_name = property['PartitionKey']
+            try:
+                # Initialize tracking lists for this property
+                property_deletions, property_updates, property_additions, property_errors = [], [], [], []
+                property_name = property['PartitionKey']
+                logger.info(f"Starting processing for property: {property_name}")
 
-            # Get reservations for this property
-            if property["RowKey"] == HOSPITABLE:
-                property_id = next((prop['id'] for prop in hospitable_properties if prop['name'] == property_name), None)
-                reservations = get_reservations(hospitable_token, property_id)
-            else:
-                property_id = ""
-                reservations = None
+                # Get reservations for this property
+                if property["RowKey"] == HOSPITABLE:
+                    property_id = next((prop['id'] for prop in hospitable_properties if prop['name'] == property_name), None)
+                    reservations = get_reservations(hospitable_token, property_id)
+                else:
+                    property_id = ""
+                    reservations = None
 
-            # Skip non-test properties in non-production mode
-            if NON_PROD and property_name != TEST_PROPERTY_NAME:
-                send_slack_message(f"Skipping property {property_name} in non-production mode.")
-                continue
+                # Skip non-test properties in non-production mode
+                if NON_PROD and property_name != TEST_PROPERTY_NAME:
+                    send_slack_message(f"Skipping property {property_name} in non-production mode.")
+                    continue
 
-            # Process different device types if requested
-            if Devices.LIGHTS in devices:
-                process_property_lights(property, reservations, current_time, property_updates, property_errors)
+                # Process different device types if requested
+                if Devices.LIGHTS in devices:
+                    logger.info(f"Processing lights for property: {property_name}")
+                    process_property_lights(property, reservations, current_time, property_updates, property_errors)
 
-            if Devices.THERMOSTATS in devices:
-                wyze_thermostats_client = wyze_client.thermostats
-                process_property_thermostats(property, reservations, wyze_thermostats_client, current_time, property_updates, property_errors)
+                if Devices.THERMOSTATS in devices:
+                    logger.info(f"Processing thermostats for property: {property_name}")
+                    wyze_thermostats_client = wyze_client.thermostats
+                    process_property_thermostats(property, reservations, wyze_thermostats_client, current_time, property_updates, property_errors)
 
-            # Log if no reservations found
-            if not reservations and ALWAYS_SEND_SLACK_SUMMARY:
-                send_slack_message(f"No reservations for property {property_name}.")
-            
-            if Devices.LOCKS in devices:
-                wyze_locks_client = wyze_client.locks
-                process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors)
+                # Log if no reservations found
+                if not reservations and ALWAYS_SEND_SLACK_SUMMARY:
+                    send_slack_message(f"No reservations for property {property_name}.")
+                
+                if Devices.LOCKS in devices:
+                    logger.info(f"Processing locks for property: {property_name}")
+                    wyze_locks_client = wyze_client.locks
+                    process_property_locks(property, reservations, wyze_locks_client, current_time, timezone, delete_all_guest_codes, property_deletions, property_updates, property_additions, property_errors)
 
+                logger.info(f"Completed processing for property: {property_name}")
+                
+            except Exception as e:
+                logger.error(f"Error processing property {property_name}: {str(e)}")
+                logger.error(f"Property data: {property}")
+                property_errors.append(f"Property processing error: {str(e)}")
+                # Continue processing other properties
+                
             # Send summary message if there were changes or if always-send flag is set
             if ALWAYS_SEND_SLACK_SUMMARY or any([property_deletions, property_updates, property_additions, property_errors]):
                 send_summary_slack_message(property_name, property_deletions, property_updates, property_additions, property_errors)
@@ -248,8 +267,15 @@ def process_property_locks(
         property_additions: List to track code additions (modified in-place)
         property_errors: List to track errors (modified in-place)
     """
-    locks = json.loads(property['Locks'])
     property_name = property['PartitionKey']
+    
+    try:
+        locks = json.loads(property['Locks'])
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in Locks field for {property_name}: {e}")
+        logger.error(f"Locks data: {property['Locks']}")
+        property_errors.append(f"JSON parsing error in Locks field: {str(e)}")
+        return
     
     for lock in locks:
         logger.info(f"Processing lock: {lock['brand']} - {lock['name']}")
@@ -292,9 +318,23 @@ def process_property_lights(
         property_updates: List to track updates (modified in-place)
         property_errors: List to track errors (modified in-place)
     """
-    lights = json.loads(property['Lights'])
-    location = json.loads(property['Location'])
     property_name = property['PartitionKey']
+    
+    try:
+        lights = json.loads(property['Lights'])
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in Lights field for {property_name}: {e}")
+        logger.error(f"Lights data: {property['Lights']}")
+        property_errors.append(f"JSON parsing error in Lights field: {str(e)}")
+        return
+        
+    try:
+        location = json.loads(property['Location'])
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in Location field for {property_name}: {e}")
+        logger.error(f"Location data: {property['Location']}")
+        property_errors.append(f"JSON parsing error in Location field: {str(e)}")
+        return
 
     for light in lights:
         logger.info(f"Processing light: {light['brand']} - {light['name']}")
@@ -334,9 +374,23 @@ def process_property_thermostats(
         property_updates: List to track updates (modified in-place)
         property_errors: List to track errors (modified in-place)
     """
-    thermostats = json.loads(property['Thermostats'])
-    location = json.loads(property['Location'])
     property_name = property['PartitionKey']
+    
+    try:
+        thermostats = json.loads(property['Thermostats'])
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in Thermostats field for {property_name}: {e}")
+        logger.error(f"Thermostats data: {property['Thermostats']}")
+        property_errors.append(f"JSON parsing error in Thermostats field: {str(e)}")
+        return
+    
+    try:
+        location = json.loads(property['Location'])
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in Location field for {property_name}: {e}")
+        logger.error(f"Location data: {property['Location']}")
+        property_errors.append(f"JSON parsing error in Location field: {str(e)}")
+        return
 
     for thermostat in thermostats:
         logger.info(f"Processing thermostat: {thermostat['brand']} - {thermostat['manufacture']} - {thermostat['name']}")

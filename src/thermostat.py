@@ -2,16 +2,48 @@
 Thermostat control logic for managing temperature settings based on weather,
 reservation status, and property configuration.
 
-This module serves as the main coordination layer for thermostat operations:
-- Determines optimal thermostat settings based on weather and reservations
-- Routes device communication to brand-specific modules in brands/ folders
-- Handles temperature alert checking and notifications
+This module serves as the main coordination layer for thermostat operations with
+a clean, brand-agnostic architecture:
+
+Core Functions:
+- Determines optimal thermostat settings based on weather forecasts and reservations
+- Routes device communication to brand-specific modules in brands/ folders  
+- Handles temperature alert checking and Slack notifications
 - Manages frequency controls and freeze protection logic
+- Provides generic business logic while delegating brand-specific complexity
+
+Architecture:
+- Generic coordination layer with zero brand-specific configuration logic
+- Clean router that dynamically imports and calls brand-specific modules
+- Brand modules handle all device communication and authentication
+- Template system for easy addition of new thermostat brands
+
+Alert System:
+- Monitors actual device settings (not target settings) for cost control
+- Runs during reservations to catch extreme guest temperature changes
+- Supports nested configuration with flexible threshold detection
+- Sends formatted Slack notifications with violation details
 
 Brand-specific device communication is handled by:
-- brands/smartthings/thermostats.py - SmartThings API integration
-- brands/wyze/thermostats.py - Wyze API integration
-- brands/__template__/thermostats.py - Template for new brands
+- brands/smartthings/thermostats.py - SmartThings API integration with location-based device lookup
+- brands/wyze/thermostats.py - Wyze SDK integration with MAC address identification
+- brands/__template__/thermostats.py - Template for implementing new brands
+
+Functions by Category:
+- Core Logic: determine_thermostat_mode(), get_comfortable_temperatures(), get_thermostat_scenario()
+- Freeze Protection: check_and_override_for_freezing() 
+- Frequency Control: should_process_thermostat_for_frequency()
+- Brand Routing: get_current_device_settings() (generic router)
+- Alert System: check_temperature_alerts_with_current_device(), check_temperature_alerts()
+- Main Entry: get_thermostat_settings() (complete thermostat configuration)
+
+Module Structure (~470 lines):
+- Configuration Constants (lines 40-55)
+- Core Temperature Logic (lines 60-145) 
+- Frequency Control (lines 150-175)
+- Brand Router (lines 180-225)
+- Alert System (lines 230-430)
+- Main Settings Function (lines 435-470)
 """
 from weather import get_weather_forecast
 from logger import Logger
@@ -21,22 +53,24 @@ from typing import List, Tuple, Optional
 import os
 
 # === Configuration Constants ===
+# Global constants for thermostat operations
 
 logger = Logger()
 
-# Get timezone from environment
+# Get timezone from environment variable for proper time calculations
 TIMEZONE = os.environ.get('TIMEZONE', 'UTC')
 
-# Default frequency if not specified
+# Default frequency for thermostat processing if not specified in configuration
 DEFAULT_FREQUENCY = 'first_day'
 
-# Alert message emojis
-ALERT_EMOJI_COOL = '🔵'
-ALERT_EMOJI_HEAT = '🔴'
-ALERT_EMOJI_THERMOSTAT = '🌡️'
+# Emoji constants for Slack alert messages to improve readability and visual impact
+ALERT_EMOJI_COOL = '🔵'    # Blue circle for cooling alerts
+ALERT_EMOJI_HEAT = '🔴'    # Red circle for heating alerts  
+ALERT_EMOJI_THERMOSTAT = '🌡️'  # Thermometer for main alert header
 
 # === Core Temperature Logic Functions ===
-# Functions for determining HVAC modes, temperature settings, and scenarios
+# Business logic functions for determining HVAC modes, temperature settings, and scenarios
+# These functions contain the core thermostat intelligence independent of any specific brand
 
 def determine_thermostat_mode(max_temp, min_temp):
     """
@@ -145,7 +179,8 @@ def check_and_override_for_freezing(min_temp, freeze_protection):
     return None, None, None
 
 # === Frequency and Processing Control Functions ===
-# Functions for controlling when thermostats should be processed
+# Functions for controlling when thermostats should be processed based on reservation timing
+# Supports 'daily' processing or 'first_day' processing to optimize API calls and energy management
 
 def should_process_thermostat_for_frequency(temperature_config: dict, reservation_start_date: datetime.date, current_date: datetime.date) -> bool:
     """
@@ -172,23 +207,37 @@ def should_process_thermostat_for_frequency(temperature_config: dict, reservatio
         return current_date == reservation_start_date
 
 # === Brand Router Functions ===
-# Functions for routing device communication to brand-specific modules
+# Generic routing functions for brand-agnostic device communication
+# Routes calls to appropriate brand-specific modules without containing brand-specific logic
+# Maintains clean separation between coordination and device communication
 
 def get_current_device_settings(thermostat, property_config, target_mode, target_cool, target_heat, wyze_client=None):
     """
-    Get current thermostat settings from the physical device based on brand.
-    Routes to brand-specific implementations in their respective folders.
+    Generic router for reading current thermostat settings from physical devices.
+    Routes to brand-specific implementations without containing brand-specific logic.
+    
+    This function maintains clean architecture by:
+    - Dynamically importing brand modules only when needed
+    - Delegating all configuration parsing to brand modules  
+    - Providing consistent interface regardless of brand
+    - Handling errors gracefully with fallback to target settings
     
     Args:
-        thermostat: Thermostat configuration dictionary
-        property_config: Property configuration with brand settings
-        target_mode: Target mode (used for comparison)
-        target_cool: Target cooling temperature (used for comparison)
-        target_heat: Target heating temperature (used for comparison)
-        wyze_client: Optional Wyze client to avoid re-authentication
+        thermostat: Thermostat configuration dictionary with 'brand' and 'name' keys
+        property_config: Property configuration with brand settings (for config-based brands)
+        target_mode: Target mode for comparison/fallback ('cool', 'heat', 'auto')
+        target_cool: Target cooling temperature for comparison/fallback
+        target_heat: Target heating temperature for comparison/fallback
+        wyze_client: Optional Wyze client to avoid re-authentication (for client-based brands)
         
     Returns:
-        Tuple of (current_mode, current_cool_temp, current_heat_temp) or (target_mode, target_cool, target_heat) if unable to read
+        Tuple of (current_mode, current_cool_temp, current_heat_temp) from device,
+        or (target_mode, target_cool, target_heat) if unable to read device state
+        
+    Brand Support:
+        - 'smartthings': Routes to brands.smartthings.thermostats.get_current_device_settings_from_config()
+        - 'wyze': Routes to brands.wyze.thermostats.get_current_device_settings_from_config()
+        - Other brands: Returns target settings with warning (graceful degradation)
     """
     try:
         brand = thermostat.get('brand', '').lower()
@@ -215,29 +264,48 @@ def get_current_device_settings(thermostat, property_config, target_mode, target
         return target_mode, target_cool, target_heat
 
 # === Alert System Functions ===
-# Functions for checking temperature alerts and routing to brand-specific device readers
+# Temperature monitoring and notification system for cost control during guest stays
+# Checks actual device settings (not target settings) to catch extreme guest temperature changes
+# Supports flexible threshold configuration and sends formatted Slack notifications
 
 def check_temperature_alerts_with_current_device(thermostat_name: str, property_name: str, thermostat: dict, property_config: dict, target_mode: str, target_cool: int, target_heat: int, temperature_config: dict, wyze_client=None) -> list:
     """
-    Check if current thermostat device settings violate alert thresholds by first reading actual device state.
-    This helps identify when guests set extreme temperatures that could increase energy costs.
+    Main entry point for temperature alert checking with actual device state reading.
+    Coordinates reading current device settings and checking against alert thresholds.
     
-    This is the main entry point for alert checking - it coordinates reading current device settings
-    and then checking those settings against configured alert thresholds.
+    This function is crucial for cost control during guest stays by:
+    - Reading actual device state (not target settings) to catch guest changes
+    - Detecting extreme temperature settings that increase energy costs
+    - Only running during reservations to avoid false alerts
+    - Providing detailed violation information for property management
+    
+    Flow:
+    1. Routes to brand-specific module to read current device settings
+    2. Compares current settings against configured alert thresholds  
+    3. Generates and sends Slack notifications for violations
+    4. Returns list of alerts sent for logging/tracking
     
     Args:
-        thermostat_name: Name of the thermostat
-        property_name: Name of the property
-        thermostat: Thermostat configuration dictionary
+        thermostat_name: Name of the thermostat for identification
+        property_name: Name of the property for alert context
+        thermostat: Thermostat configuration dictionary with brand info
         property_config: Property configuration with brand settings
-        target_mode: Target thermostat mode we would set
-        target_cool: Target cooling setpoint we would set
-        target_heat: Target heating setpoint we would set
-        temperature_config: Temperature configuration with alert settings
+        target_mode: Target thermostat mode we would set (for comparison)
+        target_cool: Target cooling setpoint we would set (for comparison)
+        target_heat: Target heating setpoint we would set (for comparison)
+        temperature_config: Temperature configuration with alert thresholds and settings
         wyze_client: Optional Wyze client to avoid re-authentication
         
     Returns:
-        List of alert messages sent
+        List of alert messages sent to Slack (empty list if no violations)
+        
+    Example Usage:
+        alerts = check_temperature_alerts_with_current_device(
+            "Living Room", "Beach House", thermostat_config, property_config,
+            "cool", 74, 68, temp_config
+        )
+        if alerts:
+            logger.info(f"Sent {len(alerts)} temperature alerts")
     """
     # Get current device settings (not target settings) by routing to brand-specific implementation
     current_mode, current_cool, current_heat = get_current_device_settings(

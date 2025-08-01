@@ -21,11 +21,13 @@ This Azure Functions application automatically synchronizes smart home devices f
 
 ### 🌡️ **Advanced Thermostat Management**
 
-- Frequency control: "first_day" vs "daily" temperature changes
-- Temperature threshold alerts with customizable limits
-- Detailed before/after change tracking in Slack
-- Support for both SmartThings and Wyze thermostats
-- Freeze protection and energy-saving modes
+- **Brand-Agnostic Architecture**: Generic coordination layer that works with any thermostat brand
+- **Intelligent Frequency Control**: "first_day" vs "daily" processing to optimize API calls and energy management
+- **Real-Time Cost Control**: Monitors actual device settings (not targets) to catch expensive guest changes
+- **Smart Alert System**: Customizable temperature thresholds with detailed Slack notifications
+- **Freeze Protection**: Automatic pipe protection during non-reservation periods with weather integration
+- **Template System**: Easy addition of new thermostat brands using established patterns
+- **Comprehensive Error Handling**: Graceful degradation and robust retry logic
 
 ### 📊 **Application Insights Integration**
 
@@ -287,112 +289,103 @@ SmartThings lights can be controlled based on time schedules, sunrise/sunset cal
 - With retries: `💡 Updated Lights 'String Lights' at 'Paradise Cove': OFF → ON (verified on attempt 2)`
 - Failures: `⚠️ Failed to update Lights 'String Lights' at 'Paradise Cove' to ON after 3 attempts`
 
-#### Thermostat Configuration (with Frequency and Alerts)
+#### Thermostat Configuration (Advanced Features)
 
-You can now control when thermostat changes are made during reservations using the `frequency` field, and configure Slack alerts for temperature setpoints using the `alerts` field.
+The thermostat system now features a **clean brand-agnostic architecture** with advanced frequency control and intelligent cost monitoring during guest stays.
+
+##### Key Features
+
+- **Generic Coordination**: Main logic works with any thermostat brand through dynamic routing
+- **Frequency Control**: Choose between "first_day" (API-efficient) or "daily" (maximum control) processing
+- **Cost Control Alerts**: Monitor actual device settings to catch expensive guest temperature changes
+- **Brand Flexibility**: Easy addition of new brands using template system
 
 ##### Frequency Options
 
-- `"first_day"` (default): Only apply changes on the check-in day
-- `"daily"`: Apply changes every day during the reservation
+- `"first_day"` (default): Apply changes only on check-in day - reduces API calls and prevents throttling
+- `"daily"`: Apply changes every day during reservation - maximum control for variable weather
 
-##### Alert Options
+##### Alert System
 
-- `cool_below`: Alert if cooling setpoint is below this value
-- `cool_above`: Alert if cooling setpoint is above this value
-- `heat_below`: Alert if heating setpoint is below this value
-- `heat_above`: Alert if heating setpoint is above this value
-- `enabled`: Boolean to enable/disable alerts (default: true)
-- `slack_channel`: Optional custom Slack channel for alerts
+Monitor actual thermostat settings (not target settings) to catch when guests set extreme temperatures:
 
-##### Example Table Object in JSON
+- `cool_below`/`cool_above`: Cooling setpoint thresholds
+- `heat_below`/`heat_above`: Heating setpoint thresholds  
+- `enabled`: Enable/disable alerts (default: true if thresholds exist)
+- `slack_channel`: Optional custom channel for alerts
+
+##### Enhanced Configuration Example
 
 ```json
 {
-  "PartitionKey": "Boston - Main St",
-  "RowKey": "Hospitable",
+  "PartitionKey": "Mountain Cabin Resort",
+  "RowKey": "Hospitable", 
   "Active": true,
-  "BrandSettings": [ { "brand": "smartthings", "location": "Boston Main St" } ],
-  "Lights": [
-    {"brand": "smartthings", "name": "String Lights", "when": "reservations_only", "minutes_before_sunset": 30, "minutes_after_sunrise": 30, "start_time": null, "stop_time": "23:00"}
-  ],
-  "Location": {"latitude": "42.3554334", "longitude": "-71.060511"},
-  "Locks": [
-    { "brand": "wyze", "name": "Boston - Main St - FD" },
-    { "brand": "smartthings", "name": "Backdoor" }
-  ],
+  "Location": {"latitude": 40.7128, "longitude": -74.0060},
+  "BrandSettings": "[{\"brand\":\"smartthings\",\"location\":\"Cabin Location\"}]",
   "Thermostats": [
     {
       "brand": "smartthings",
       "manufacture": "ecobee",
-      "name": "Upstairs",
+      "name": "Main Floor Thermostat",
       "temperatures": [
         {
           "when": "reservations_only",
-          "mode": "cool",
-          "cool_temp": 72,
-          "heat_temp": 68,
-          "frequency": "first_day",
-          "alerts": {
-            "cool_below": 70,
-            "cool_above": 78,
-            "heat_below": 65,
-            "heat_above": 75,
-            "enabled": true,
-            "slack_channel": "#thermostat-alerts"
-          }
-        },
-        {
-          "when": "reservations_only",
-          "mode": "heat",
-          "cool_temp": 78,
-          "heat_temp": 72,
+          "mode": "auto",
+          "cool_temp": 74,
+          "heat_temp": 70,
           "frequency": "daily",
           "alerts": {
-            "cool_below": 75,
-            "cool_above": 82,
-            "heat_below": 68,
-            "heat_above": 75,
-            "enabled": true
+            "cool_below": 72,
+            "cool_above": 78,
+            "heat_below": 67,
+            "heat_above": 76,
+            "enabled": true,
+            "slack_channel": "#energy-alerts"
           }
         },
         {
           "when": "non_reservations",
-          "mode": "cool",
+          "mode": "auto",
           "cool_temp": 85,
           "heat_temp": 50,
           "freeze_protection": {
             "freeze_temp": 32,
-            "heat_temp": 70
+            "heat_temp": 55
           }
         }
-      ],
-      "rest_times": ["01:00", "16:00"]
+      ]
     }
   ]
 }
 ```
 
-##### Alert Message Example
+##### Supported Brands
 
+- **SmartThings**: JSON configuration with location-based device lookup
+- **Wyze**: Client-based with MAC address identification  
+- **Template System**: Easy pattern for adding new brands (see `src/brands/__template__/`)
+
+##### Alert Message Examples
+
+**Cost Control Alert:**
 ```
-🌡️ Thermostat Alert - Boston - Main St
-Thermostat: Upstairs
+🌡️ Thermostat Alert - Mountain Cabin Resort
+Thermostat: Main Floor Thermostat
 Current Mode: cool
 Current Settings: Cool 68°F, Heat 70°F
 Violations:
-• 🔵 Cool setpoint 68°F is below threshold 70°F
+• 🔵 Cool setpoint 68°F is below threshold 72°F
 ```
 
-##### Temperature Change Message Example
-
+**Temperature Change Notification:**
 ```
-🌡️ Updated Thermostat 'Upstairs' at 'Boston - Main St'
+🌡️ Updated Thermostat 'Main Floor' at 'Mountain Cabin'
 Current Temperature: 73°F
 Changes Made:
 • Mode: heat → cool
-• Cool: 78°F → 72°F
-• Heat: 72°F → 68°F
+• Cool: 78°F → 74°F
+• Heat: 72°F → 70°F
 ```
 
 ## Azure Functions
