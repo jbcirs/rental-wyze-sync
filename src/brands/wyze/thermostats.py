@@ -112,10 +112,11 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
     try:
         # Validate input data
         if not thermostat or 'name' not in thermostat:
-            error_msg = f"🔍 Missing Data: Thermostat configuration is missing or invalid for `{property_name}`."
+            error_msg = f"Missing Data: Thermostat configuration is missing or invalid for {property_name}."
+            slack_msg = f"🔍 Missing Data: Thermostat configuration is missing or invalid for `{property_name}`."
             logger.error(error_msg)
             errors.append(error_msg)
-            send_slack_message(error_msg)
+            send_slack_message(slack_msg)
             return updates, errors
             
         # Retrieve the thermostat device from Wyze
@@ -123,19 +124,22 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
         thermostat_device = get_device_by_name(client, thermostat_name)
 
         if thermostat_device is None:
-            error_msg = f"❓ Device Not Found: Unable to fetch {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`. Please verify the device is online and correctly named."
-            send_slack_message(error_msg)
+            error_msg = f"Device Not Found: Unable to fetch {Device.THERMOSTAT.value} {thermostat_name} at {property_name}. Please verify the device is online and correctly named."
+            slack_msg = f"❓ Device Not Found: Unable to fetch {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`. Please verify the device is online and correctly named."
+            logger.error(error_msg)
             errors.append(error_msg)
+            send_slack_message(slack_msg)
             return updates, errors
 
         # Check if thermostat needs updating by comparing current and desired settings
         status_result = thermostat_needs_updating(client, thermostat_device, mode, cool_temp, heat_temp, scenario)
         
         if status_result is None:
-            error_msg = f"🌡️ Thermostat Status Error: Unable to retrieve current status for `{thermostat_name}` at `{property_name}`. The device may be offline or experiencing connectivity issues."
+            error_msg = f"Thermostat Status Error: Unable to retrieve current status for {thermostat_name} at {property_name}. The device may be offline or experiencing connectivity issues."
+            slack_msg = f"🌡️ Thermostat Status Error: Unable to retrieve current status for `{thermostat_name}` at `{property_name}`. The device may be offline or experiencing connectivity issues."
             logger.error(error_msg)
             errors.append(error_msg)
-            send_slack_message(error_msg)
+            send_slack_message(slack_msg)
             return updates, errors
             
         needs_update, current_temperature, thermostat_humidity, thermostat_mode, thermostat_fan_mode, heating_setpoint, cooling_setpoint, thermostat_scenario = status_result
@@ -202,22 +206,28 @@ def sync(client, thermostat, mode, cool_temp, heat_temp, scenario, property_name
                 # Send detailed status change to Slack
                 send_slack_message(update_msg)
             else:
-                error_msg = f"⚠️ Partial update failure for {Device.THERMOSTAT.value} {thermostat_name} at {property_name}:"
+                error_msg = f"Partial update failure for {Device.THERMOSTAT.value} {thermostat_name} at {property_name}:"
                 error_msg += f"\nMode update: {'✅' if update_successful_mode else '❌'}"
                 error_msg += f"\nTemp update: {'✅' if update_successful_temp else '❌'}"
                 error_msg += f"\nFan update: {'✅' if update_successful_fan else '❌'}"
                 error_msg += f"\nScenario update: {'✅' if update_successful_scenario else '❌'}"
+                slack_msg = f"⚠️ Partial update failure for {Device.THERMOSTAT.value} {thermostat_name} at {property_name}:"
+                slack_msg += f"\nMode update: {'✅' if update_successful_mode else '❌'}"
+                slack_msg += f"\nTemp update: {'✅' if update_successful_temp else '❌'}"
+                slack_msg += f"\nFan update: {'✅' if update_successful_fan else '❌'}"
+                slack_msg += f"\nScenario update: {'✅' if update_successful_scenario else '❌'}"
                 logger.error(error_msg)
                 errors.append(f"Updating {Device.THERMOSTAT.value} for {thermostat_name} at {property_name}")
-                send_slack_message(error_msg)
+                send_slack_message(slack_msg)
         else:
             logger.info(f"No update needed for {Device.THERMOSTAT.value} {thermostat_name} at {property_name}")
 
     except Exception as e:
-        error_msg = f"❌ Unexpected Error in Wyze {Device.THERMOSTAT.value} function for `{property_name}`: {str(e)}"
+        error_msg = f"Unexpected Error in Wyze {Device.THERMOSTAT.value} function for {property_name}: {str(e)}"
+        slack_msg = f"❌ Unexpected Error in Wyze {Device.THERMOSTAT.value} function for `{property_name}`: {str(e)}"
         logger.error(error_msg)
         errors.append(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
 
     return updates, errors
 

@@ -103,27 +103,32 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
     try:
         # Validate input data
         if not thermostat or 'name' not in thermostat:
-            error_msg = f"🔍 Missing Data: Thermostat configuration is missing or invalid for `{property_name}`."
+            error_msg = f"Missing Data: Thermostat configuration is missing or invalid for {property_name}."
+            slack_msg = f"🔍 Missing Data: Thermostat configuration is missing or invalid for `{property_name}`."
             logger.error(error_msg)
             errors.append(error_msg)
-            send_slack_message(error_msg)
+            send_slack_message(slack_msg)
             return updates, errors
             
         thermostat_name = thermostat['name']
         location_id = find_location_by_name(location)
 
         if location_id is None:
-            error_msg = f"❓ Location Not Found: Unable to fetch location ID for `{location}` when configuring thermostat at `{property_name}`."
-            send_slack_message(error_msg)
+            error_msg = f"Location Not Found: Unable to fetch location ID for {location} when configuring thermostat at {property_name}."
+            slack_msg = f"❓ Location Not Found: Unable to fetch location ID for `{location}` when configuring thermostat at `{property_name}`."
+            logger.error(error_msg)
             errors.append(error_msg)
+            send_slack_message(slack_msg)
             return updates, errors
 
         thermostat_id = get_device_id_by_label(location_id, thermostat_name)
 
         if thermostat_id is None:
-            error_msg = f"❓ Device Not Found: Unable to fetch {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`. Please verify the device is online and correctly named."
-            send_slack_message(error_msg)
+            error_msg = f"Device Not Found: Unable to fetch {Device.THERMOSTAT.value} {thermostat_name} at {property_name}. Please verify the device is online and correctly named."
+            slack_msg = f"❓ Device Not Found: Unable to fetch {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`. Please verify the device is online and correctly named."
+            logger.error(error_msg)
             errors.append(error_msg)
+            send_slack_message(slack_msg)
             return updates, errors
 
         # Check if thermostat needs updating by comparing current and desired settings
@@ -131,10 +136,11 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
         status_result = thermostat_needs_updating(thermostat_id, mode, cool_temp, heat_temp)
         
         if status_result is None:
-            error_msg = f"🌡️ Thermostat Status Error: Unable to retrieve current status for `{thermostat_name}` at `{property_name}`. The device may be offline or experiencing connectivity issues."
+            error_msg = f"Thermostat Status Error: Unable to retrieve current status for {thermostat_name} at {property_name}. The device may be offline or experiencing connectivity issues."
+            slack_msg = f"🌡️ Thermostat Status Error: Unable to retrieve current status for `{thermostat_name}` at `{property_name}`. The device may be offline or experiencing connectivity issues."
             logger.error(error_msg)
             errors.append(error_msg)
-            send_slack_message(error_msg)
+            send_slack_message(slack_msg)
             return updates, errors
             
         needs_update, current_settings = status_result
@@ -173,18 +179,20 @@ def sync(thermostat, mode, cool_temp, heat_temp, property_name, location):
                 # Send detailed status change to Slack
                 send_slack_message(update_msg)
             else:
-                error_msg = f"⚠️ Failed to update {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`"
+                error_msg = f"Failed to update {Device.THERMOSTAT.value} {thermostat_name} at {property_name}"
+                slack_msg = f"⚠️ Failed to update {Device.THERMOSTAT.value} `{thermostat_name}` at `{property_name}`"
                 logger.error(error_msg)
                 errors.append(f"Updating {Device.THERMOSTAT.value} for {thermostat_name} at {property_name}")
-                send_slack_message(error_msg)
+                send_slack_message(slack_msg)
         else:
             logger.info(f"No update needed for {Device.THERMOSTAT.value} {thermostat_name} at {property_name}")
 
     except Exception as e:
-        error_msg = f"❌ Unexpected Error in SmartThings {Device.THERMOSTAT.value} function for `{property_name}`: {str(e)}"
+        error_msg = f"Unexpected Error in SmartThings {Device.THERMOSTAT.value} function for {property_name}: {str(e)}"
+        slack_msg = f"❌ Unexpected Error in SmartThings {Device.THERMOSTAT.value} function for `{property_name}`: {str(e)}"
         logger.error(error_msg)
         errors.append(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
 
     return updates, errors
 

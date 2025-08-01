@@ -1,6 +1,7 @@
 from logger import Logger
 import os
 import time
+import requests
 from wyze_sdk import Client
 from wyze_sdk.errors import WyzeApiError
 from azure.identity import DefaultAzureCredential
@@ -72,25 +73,29 @@ def get_device_by_name(client, name):
                 return device
         
         # Device not found after checking all devices
-        error_msg = f"❓ Device Not Found: No device named '{name}' found in your Wyze account. Please verify the device exists and is correctly named."
+        error_msg = f"Device Not Found: No device named '{name}' found in your Wyze account. Please verify the device exists and is correctly named."
+        slack_msg = f"❓ Device Not Found: No device named '{name}' found in your Wyze account. Please verify the device exists and is correctly named."
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
     except WyzeApiError as e:
         error_code = getattr(e, 'code', 'unknown')
-        error_msg = f"⚠️ Wyze API Error: Failed to retrieve device '{name}'. Error code: {error_code}. {str(e)}"
+        error_msg = f"Wyze API Error: Failed to retrieve device '{name}'. Error code: {error_code}. {str(e)}"
+        slack_msg = f"⚠️ Wyze API Error: Failed to retrieve device '{name}'. Error code: {error_code}. {str(e)}"
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
     except requests.exceptions.Timeout:
-        error_msg = f"⏱️ Timeout Error: Connection to Wyze API timed out while searching for device '{name}'. Please check your network connection."
+        error_msg = f"Timeout Error: Connection to Wyze API timed out while searching for device '{name}'. Please check your network connection."
+        slack_msg = f"⏱️ Timeout Error: Connection to Wyze API timed out while searching for device '{name}'. Please check your network connection."
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
     except Exception as e:
-        error_msg = f"❌ Unexpected Error: Failed to search for device '{name}'. Error: {str(e)}"
+        error_msg = f"Unexpected Error: Failed to search for device '{name}'. Error: {str(e)}"
+        slack_msg = f"❌ Unexpected Error: Failed to search for device '{name}'. Error: {str(e)}"
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
 
 def get_thermostat_status(client, device):
@@ -108,19 +113,22 @@ def get_thermostat_status(client, device):
         return client.info(device_mac=device.mac, device_model=device.product.model)
     except WyzeApiError as e:
         error_code = getattr(e, 'code', 'unknown')
-        error_msg = f"⚠️ Wyze API Error: Failed to get status for thermostat '{device.nickname}'. Error code: {error_code}. {str(e)}"
+        error_msg = f"Wyze API Error: Failed to get status for thermostat '{device.nickname}'. Error code: {error_code}. {str(e)}"
+        slack_msg = f"⚠️ Wyze API Error: Failed to get status for thermostat '{device.nickname}'. Error code: {error_code}. {str(e)}"
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
     except requests.exceptions.Timeout:
-        error_msg = f"⏱️ Timeout Error: Connection to Wyze API timed out while retrieving thermostat status for '{device.nickname}'."
+        error_msg = f"Timeout Error: Connection to Wyze API timed out while retrieving thermostat status for '{device.nickname}'."
+        slack_msg = f"⏱️ Timeout Error: Connection to Wyze API timed out while retrieving thermostat status for '{device.nickname}'."
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
     except Exception as e:
-        error_msg = f"❌ Unexpected Error: Failed to get thermostat status for '{device.nickname}'. Error: {str(e)}"
+        error_msg = f"Unexpected Error: Failed to get thermostat status for '{device.nickname}'. Error: {str(e)}"
+        slack_msg = f"❌ Unexpected Error: Failed to get thermostat status for '{device.nickname}'. Error: {str(e)}"
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
 
 def set_thermostat_temperature(client, device, heating_setpoint, cooling_setpoint):
@@ -254,19 +262,22 @@ def get_lock_codes(locks_client, lock_mac):
         return codes
     except WyzeApiError as e:
         error_code = getattr(e, 'code', 'unknown')
-        error_msg = f"⚠️ Wyze API Error: Failed to retrieve lock codes for lock {lock_mac}. Error code: {error_code}. {str(e)}"
+        error_msg = f"Wyze API Error: Failed to retrieve lock codes for lock {lock_mac}. Error code: {error_code}. {str(e)}"
+        slack_msg = f"⚠️ Wyze API Error: Failed to retrieve lock codes for lock {lock_mac}. Error code: {error_code}. {str(e)}"
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
     except requests.exceptions.Timeout:
-        error_msg = f"⏱️ Timeout Error: Connection to Wyze API timed out while retrieving lock codes for {lock_mac}."
+        error_msg = f"Timeout Error: Connection to Wyze API timed out while retrieving lock codes for {lock_mac}."
+        slack_msg = f"⏱️ Timeout Error: Connection to Wyze API timed out while retrieving lock codes for {lock_mac}."
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
     except Exception as e:
-        error_msg = f"❌ Unexpected Error: Failed to retrieve lock codes for {lock_mac}. Error: {str(e)}"
+        error_msg = f"Unexpected Error: Failed to retrieve lock codes for {lock_mac}. Error: {str(e)}"
+        slack_msg = f"❌ Unexpected Error: Failed to retrieve lock codes for {lock_mac}. Error: {str(e)}"
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return None
 
 def find_code(existing_codes, label):
@@ -299,9 +310,10 @@ def add_lock_code(locks_client, lock_mac, code, label, permission):
     try:
         # Validate phone code is numeric and not empty
         if not code or not code.isdigit():
-            error_msg = f"📱 Invalid Lock Code: Cannot create lock code for '{label}' - code '{code}' is not a valid numeric code."
+            error_msg = f"Invalid Lock Code: Cannot create lock code for '{label}' - code '{code}' is not a valid numeric code."
+            slack_msg = f"📱 Invalid Lock Code: Cannot create lock code for '{label}' - code '{code}' is not a valid numeric code."
             logger.error(error_msg)
-            send_slack_message(error_msg)
+            send_slack_message(slack_msg)
             return False
             
         response = locks_client.create_access_code(
@@ -311,9 +323,10 @@ def add_lock_code(locks_client, lock_mac, code, label, permission):
             permission=permission
         )
         if response['ErrNo'] != 0:
-            error_msg = f"🔐 Lock Code Error: {get_error_message(response['ErrNo'])} for code '{label}' on lock {lock_mac}."
+            error_msg = f"Lock Code Error: {get_error_message(response['ErrNo'])} for code '{label}' on lock {lock_mac}."
+            slack_msg = f"🔐 Lock Code Error: {get_error_message(response['ErrNo'])} for code '{label}' on lock {lock_mac}."
             logger.error(f"{error_msg}; Original response: {response}")
-            send_slack_message(error_msg)
+            send_slack_message(slack_msg)
             return False
         
         logger.info(f"{response}")
@@ -323,19 +336,22 @@ def add_lock_code(locks_client, lock_mac, code, label, permission):
         return True
     except WyzeApiError as e:
         error_code = getattr(e, 'code', 'unknown')
-        error_msg = f"⚠️ Wyze API Error: Failed to add lock code '{label}' to lock {lock_mac}. Error code: {error_code}. {str(e)}"
+        error_msg = f"Wyze API Error: Failed to add lock code '{label}' to lock {lock_mac}. Error code: {error_code}. {str(e)}"
+        slack_msg = f"⚠️ Wyze API Error: Failed to add lock code '{label}' to lock {lock_mac}. Error code: {error_code}. {str(e)}"
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return False
     except requests.exceptions.Timeout:
-        error_msg = f"⏱️ Timeout Error: Connection to Wyze API timed out while adding lock code '{label}' to lock {lock_mac}."
+        error_msg = f"Timeout Error: Connection to Wyze API timed out while adding lock code '{label}' to lock {lock_mac}."
+        slack_msg = f"⏱️ Timeout Error: Connection to Wyze API timed out while adding lock code '{label}' to lock {lock_mac}."
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return False
     except Exception as e:
-        error_msg = f"❌ Unexpected Error: Failed to add lock code '{label}' to lock {lock_mac}. Error: {str(e)}"
+        error_msg = f"Unexpected Error: Failed to add lock code '{label}' to lock {lock_mac}. Error: {str(e)}"
+        slack_msg = f"❌ Unexpected Error: Failed to add lock code '{label}' to lock {lock_mac}. Error: {str(e)}"
         logger.error(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
         return False
 
 def update_lock_code(locks_client, lock_mac, code_id, code, label, permission):

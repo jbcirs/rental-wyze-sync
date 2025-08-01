@@ -44,28 +44,34 @@ def sync(lock_name, property_name, location, reservations, current_time):
         location_id = find_location_by_name(location)
         if location_id is None:
             error_msg = f"Unable to fetch location ID for {Device.LOCK.value} '{lock_name}' at {property_name}."
-            send_slack_message(error_msg)
             errors.append(error_msg)
+            send_slack_message(error_msg)
             return deletions, updates, additions, errors
         
         # Get locks with current codes - this uses refresh mechanism to ensure latest data
         locks_with_users = get_locks(location_id)
         if locks_with_users is None:
-            send_slack_message(f"Unable to fetch {Device.LOCK.value} with users for {lock_name} at {property_name}.")
+            error_msg = f"Unable to fetch {Device.LOCK.value} with users for {lock_name} at {property_name}."
+            errors.append(error_msg)
+            send_slack_message(error_msg)
             return deletions, updates, additions, errors
         
         lock = find_lock_by_name(locks_with_users, lock_name)
         if lock is None:
-            send_slack_message(f"Unable to fetch {Device.LOCK.value} for {lock_name} at {property_name}.")
+            error_msg = f"Unable to fetch {Device.LOCK.value} for {lock_name} at {property_name}."
+            errors.append(error_msg)
+            send_slack_message(error_msg)
             return deletions, updates, additions, errors
         
         # Process reservations
         for reservation in reservations:
             # Validate reservation data
             if 'guest' not in reservation or not reservation['guest']:
-                error_msg = f"🔍 Missing Data: Reservation is missing guest name for `{property_name}`. Skipping lock code management for this reservation."
-                logger.error(error_msg)
+                error_msg = f"Missing Data: Reservation is missing guest name for {property_name}. Skipping lock code management for this reservation."
                 errors.append(error_msg)
+                slack_msg = f"🔍 Missing Data: Reservation is missing guest name for `{property_name}`. Skipping lock code management for this reservation."
+                logger.error(slack_msg)
+                send_slack_message(slack_msg)
                 continue
                 
             guest_name = reservation['guest']
@@ -73,9 +79,11 @@ def sync(lock_name, property_name, location, reservations, current_time):
             
             # Check for valid phone number
             if 'phone' not in reservation or not reservation['phone']:
-                error_msg = f"📱 Missing Phone Number: Guest `{guest_first_name}` has no phone number associated with their reservation at `{property_name}`. Skipping code creation."
-                logger.error(error_msg)
+                error_msg = f"Missing Phone Number: Guest {guest_first_name} has no phone number associated with their reservation at {property_name}. Skipping code creation."
                 errors.append(error_msg)
+                slack_msg = f"📱 Missing Phone Number: Guest `{guest_first_name}` has no phone number associated with their reservation at `{property_name}`. Skipping code creation."
+                logger.error(slack_msg)
+                send_slack_message(slack_msg)
                 continue
                 
             # Extract last 4 digits of phone number
@@ -84,22 +92,28 @@ def sync(lock_name, property_name, location, reservations, current_time):
                 # Remove any non-numeric characters
                 phone_clean = ''.join(filter(str.isdigit, phone))
                 if len(phone_clean) < 4:
-                    error_msg = f"📱 Invalid Phone Number: Phone number for guest `{guest_first_name}` at `{property_name}` doesn't have enough digits. Skipping code creation."
-                    logger.error(error_msg)
+                    error_msg = f"Invalid Phone Number: Phone number for guest {guest_first_name} at {property_name} doesn't have enough digits. Skipping code creation."
                     errors.append(error_msg)
+                    slack_msg = f"📱 Invalid Phone Number: Phone number for guest `{guest_first_name}` at `{property_name}` doesn't have enough digits. Skipping code creation."
+                    logger.error(slack_msg)
+                    send_slack_message(slack_msg)
                     continue
                     
                 phone_last4 = phone_clean[-4:]
                 
                 if not phone_last4.isdigit():
-                    error_msg = f"📱 Non-numeric Phone: Unable to extract numeric code from phone number for guest `{guest_first_name}` at `{property_name}`. Skipping code creation."
-                    logger.error(error_msg)
+                    error_msg = f"Non-numeric Phone: Unable to extract numeric code from phone number for guest {guest_first_name} at {property_name}. Skipping code creation."
                     errors.append(error_msg)
+                    slack_msg = f"📱 Non-numeric Phone: Unable to extract numeric code from phone number for guest `{guest_first_name}` at `{property_name}`. Skipping code creation."
+                    logger.error(slack_msg)
+                    send_slack_message(slack_msg)
                     continue
             except Exception as e:
-                error_msg = f"📱 Phone Number Error: Failed to process phone number for guest `{guest_first_name}` at `{property_name}`. Error: {str(e)}"
-                logger.error(error_msg)
+                error_msg = f"Phone Number Error: Failed to process phone number for guest {guest_first_name} at {property_name}. Error: {str(e)}"
                 errors.append(error_msg)
+                slack_msg = f"📱 Phone Number Error: Failed to process phone number for guest `{guest_first_name}` at `{property_name}`. Error: {str(e)}"
+                logger.error(slack_msg)
+                send_slack_message(slack_msg)
                 continue
             
             label = f"Guest {guest_first_name}"
@@ -142,27 +156,30 @@ def sync(lock_name, property_name, location, reservations, current_time):
                             elif verify_attempt == LOCK_CODE_VERIFY_MAX_ATTEMPTS:
                                 logger.error(f"❌ Failed to verify {Device.LOCK.value} code after {LOCK_CODE_VERIFY_MAX_ATTEMPTS} attempts for {lock_name}: {label}")
                                 if attempt == LOCK_CODE_ADD_MAX_ATTEMPTS:
-                                    error_msg = f"🔐 Failed to add and verify {Device.LOCK.value} code after {LOCK_CODE_ADD_MAX_ATTEMPTS} attempts for {lock_name}: {label}"
-                                    logger.error(error_msg)
-                                    send_slack_message(error_msg)
+                                    error_msg = f"Failed to add and verify {Device.LOCK.value} code after {LOCK_CODE_ADD_MAX_ATTEMPTS} attempts for {lock_name}: {label}"
                                     errors.append(error_msg)
+                                    slack_msg = f"🔐 Failed to add and verify {Device.LOCK.value} code after {LOCK_CODE_ADD_MAX_ATTEMPTS} attempts for {lock_name}: {label}"
+                                    logger.error(slack_msg)
+                                    send_slack_message(slack_msg)
                                 continue  # Try adding the code again if attempts remain
                         else:
-                            error_msg = f"🔐 Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
-                            logger.error(error_msg)
+                            error_msg = f"Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
+                            slack_msg = f"🔐 Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
+                            logger.error(slack_msg)
                             if attempt < LOCK_CODE_ADD_MAX_ATTEMPTS:
                                 logger.info(f"Waiting {SMARTTHINGS_API_DELAY_SECONDS} seconds before retry...")
                                 time.sleep(SMARTTHINGS_API_DELAY_SECONDS)
                                 continue
-                            send_slack_message(error_msg)
                             errors.append(error_msg)
+                            send_slack_message(slack_msg)
                             break
                     # After all attempts, if code was never verified, log error
                     if not code_verified:
-                        error_msg = f"❌ Failed to add and verify {Device.LOCK.value} code after all attempts for {lock_name}: {label}"
-                        logger.error(error_msg)
-                        send_slack_message(error_msg)
+                        error_msg = f"Failed to add and verify {Device.LOCK.value} code after all attempts for {lock_name}: {label}"
                         errors.append(error_msg)
+                        slack_msg = f"❌ Failed to add and verify {Device.LOCK.value} code after all attempts for {lock_name}: {label}"
+                        logger.error(slack_msg)
+                        send_slack_message(slack_msg)
 
         # Delete old guest codes - refresh lock data to get current state
         logger.info(f"🔄 Refreshing lock data before cleanup for `{lock_name}` at `{property_name}`")
@@ -194,12 +211,14 @@ def sync(lock_name, property_name, location, reservations, current_time):
                         # Update lock for next iteration
                         lock = verification_lock
                     else:
-                        error_msg = f"⚠️ Failed to verify deletion of {Device.LOCK.value} code `{user_name}` at `{property_name}`"
-                        logger.error(error_msg)
+                        error_msg = f"Failed to verify deletion of {Device.LOCK.value} code {user_name} on lock {lock_name} at {property_name}"
                         errors.append(error_msg)
-                        send_slack_message(error_msg)
+                        slack_msg = f"⚠️ Failed to verify deletion of {Device.LOCK.value} code `{user_name}` on lock `{lock_name}` at `{property_name}`"
+                        logger.error(slack_msg)
+                        send_slack_message(slack_msg)
                 else:
-                    errors.append(f"Deleting {Device.LOCK.value} Code for {lock_name}: {user_name}")
+                    error_msg = f"Deleting {Device.LOCK.value} Code for {lock_name}: {user_name}"
+                    errors.append(error_msg)
 
     except Exception as e:
         error = f"Error in SmartThings {Device.LOCK.value} function: {str(e)}"

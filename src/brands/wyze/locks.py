@@ -46,9 +46,11 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
         # Get the lock device from Wyze
         lock_info = get_device_by_name(client, lock_name)
         if lock_info is None:
-            error_msg = f"❓ Device Not Found: Unable to fetch {Device.LOCK.value} info for `{lock_name}` at `{property_name}`. Please verify the {Device.LOCK.value} exists and is connected."
-            send_slack_message(error_msg)
+            error_msg = f"Device Not Found: Unable to fetch {Device.LOCK.value} info for {lock_name} at {property_name}. Please verify the {Device.LOCK.value} exists and is connected."
+            slack_msg = f"❓ Device Not Found: Unable to fetch {Device.LOCK.value} info for `{lock_name}` at `{property_name}`. Please verify the {Device.LOCK.value} exists and is connected."
+            logger.error(error_msg)
             errors.append(error_msg)
+            send_slack_message(slack_msg)
             return deletions, updates, additions, errors
 
         # Get all existing access codes for the lock
@@ -56,18 +58,22 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
         existing_codes = get_lock_codes(client, lock_mac)
 
         if existing_codes is None:
-            error_msg = f"🔒 {Device.LOCK.value} Code Error: Unable to fetch codes for `{lock_name}` at `{property_name}`. The {Device.LOCK.value} may be offline or experiencing connectivity issues."
-            send_slack_message(error_msg)
+            error_msg = f"{Device.LOCK.value} Code Error: Unable to fetch codes for {lock_name} at {property_name}. The {Device.LOCK.value} may be offline or experiencing connectivity issues."
+            slack_msg = f"🔒 {Device.LOCK.value} Code Error: Unable to fetch codes for `{lock_name}` at `{property_name}`. The {Device.LOCK.value} may be offline or experiencing connectivity issues."
+            logger.error(error_msg)
             errors.append(error_msg)
+            send_slack_message(slack_msg)
             return deletions, updates, additions, errors
 
         # Ensure we have a valid user ID for the API operations
         client._user_id = get_user_id_from_existing_codes(existing_codes, client._user_id)
 
         if client._user_id is None:
-            error_msg = f"🔑 Authentication Error: Unable to find user_id for {Device.LOCK.value} `{lock_name}` at `{property_name}`. This may indicate an account permissions issue."
-            send_slack_message(error_msg)
+            error_msg = f"Authentication Error: Unable to find user_id for {Device.LOCK.value} {lock_name} at {property_name}. This may indicate an account permissions issue."
+            slack_msg = f"🔑 Authentication Error: Unable to find user_id for {Device.LOCK.value} `{lock_name}` at `{property_name}`. This may indicate an account permissions issue."
+            logger.error(error_msg)
             errors.append(error_msg)
+            send_slack_message(slack_msg)
             return deletions, updates, additions, errors
 
         deleted_codes = False
@@ -99,7 +105,7 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
         for reservation in reservations:
             # Validate reservation data
             if 'guest' not in reservation or not reservation['guest']:
-                error_msg = f"🔍 Missing Data: Reservation is missing guest name for `{property_name}`. Skipping lock code management for this reservation."
+                error_msg = f"Missing Data: Reservation is missing guest name for {property_name}. Skipping lock code management for this reservation."
                 logger.error(error_msg)
                 errors.append(error_msg)
                 continue
@@ -109,7 +115,7 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
             
             # Check for valid phone number
             if 'phone' not in reservation or not reservation['phone']:
-                error_msg = f"📱 Missing Phone Number: Guest `{guest_first_name}` has no phone number associated with their reservation at `{property_name}`. Skipping code creation."
+                error_msg = f"Missing Phone Number: Guest {guest_first_name} has no phone number associated with their reservation at {property_name}. Skipping code creation."
                 logger.error(error_msg)
                 errors.append(error_msg)
                 continue
@@ -120,7 +126,7 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
                 # Remove any non-numeric characters
                 phone_clean = ''.join(filter(str.isdigit, phone))
                 if len(phone_clean) < 4:
-                    error_msg = f"📱 Invalid Phone Number: Phone number for guest `{guest_first_name}` at `{property_name}` doesn't have enough digits. Skipping code creation."
+                    error_msg = f"Invalid Phone Number: Phone number for guest {guest_first_name} at {property_name} doesn't have enough digits. Skipping code creation."
                     logger.error(error_msg)
                     errors.append(error_msg)
                     continue
@@ -128,12 +134,12 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
                 phone_last4 = phone_clean[-4:]
                 
                 if not phone_last4.isdigit():
-                    error_msg = f"📱 Non-numeric Phone: Unable to extract numeric code from phone number for guest `{guest_first_name}` at `{property_name}`. Skipping code creation."
+                    error_msg = f"Non-numeric Phone: Unable to extract numeric code from phone number for guest {guest_first_name} at {property_name}. Skipping code creation."
                     logger.error(error_msg)
                     errors.append(error_msg)
                     continue
             except Exception as e:
-                error_msg = f"📱 Phone Number Error: Failed to process phone number for guest `{guest_first_name}` at `{property_name}`. Error: {str(e)}"
+                error_msg = f"Phone Number Error: Failed to process phone number for guest {guest_first_name} at {property_name}. Error: {str(e)}"
                 logger.error(error_msg)
                 errors.append(error_msg)
                 continue
@@ -186,22 +192,24 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
                             elif verify_attempt == LOCK_CODE_VERIFY_MAX_ATTEMPTS:
                                 logger.error(f"❌ Failed to verify {Device.LOCK.value} code after {LOCK_CODE_VERIFY_MAX_ATTEMPTS} attempts for {lock_name}: {label}")
                                 if attempt == LOCK_CODE_ADD_MAX_ATTEMPTS:
-                                    error_msg = f"🔐 Failed to add and verify {Device.LOCK.value} code after {LOCK_CODE_ADD_MAX_ATTEMPTS} attempts for {lock_name}: {label}"
+                                    error_msg = f"Failed to add and verify {Device.LOCK.value} code after {LOCK_CODE_ADD_MAX_ATTEMPTS} attempts for {lock_name}: {label}"
+                                    slack_msg = f"🔐 Failed to add and verify {Device.LOCK.value} code after {LOCK_CODE_ADD_MAX_ATTEMPTS} attempts for {lock_name}: {label}"
                                     logger.error(error_msg)
-                                    send_slack_message(error_msg)
                                     errors.append(error_msg)
+                                    send_slack_message(slack_msg)
                                 continue  # Try adding the code again if attempts remain
                         
                         else:
-                            error_msg = f"🔐 Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
+                            error_msg = f"Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
                             logger.error(error_msg)
                             if attempt < LOCK_CODE_ADD_MAX_ATTEMPTS:
                                 logger.info(f"Waiting {WYZE_API_DELAY_SECONDS} seconds before retry...")
                                 time.sleep(WYZE_API_DELAY_SECONDS)
                                 continue
                             
-                            send_slack_message(error_msg)
+                            slack_msg = f"🔐 Failed to add {Device.LOCK.value} code for {lock_name}: {label} (attempt {attempt})"
                             errors.append(error_msg)
+                            send_slack_message(slack_msg)
                             break
                 
                 else:
@@ -226,9 +234,10 @@ def sync(client, lock_name, property_name, reservations, current_time, timezone,
                             errors.append(f"Updating {Device.LOCK.value} Code for {lock_name}: {label}")
 
     except Exception as e:
-        error_msg = f"❌ Unexpected Error in Wyze {Device.LOCK.value} function for `{property_name}`: {str(e)}"
+        error_msg = f"Unexpected Error in Wyze {Device.LOCK.value} function for {property_name}: {str(e)}"
+        slack_msg = f"❌ Unexpected Error in Wyze {Device.LOCK.value} function for `{property_name}`: {str(e)}"
         logger.error(error_msg)
         errors.append(error_msg)
-        send_slack_message(error_msg)
+        send_slack_message(slack_msg)
 
     return deletions, updates, additions, errors
