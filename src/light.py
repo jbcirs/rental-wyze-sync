@@ -31,16 +31,16 @@ def should_light_be_on(start_time_str, stop_time_str, current_time):
     """
     # Case 1: Both start and stop times are defined
     if start_time_str is not None and stop_time_str is not None:
-        start_time = parse_local_time(start_time_str, current_time.tzinfo.zone)
-        stop_time = parse_local_time(stop_time_str, current_time.tzinfo.zone)
+        start_time = parse_local_time(start_time_str, current_time.tzinfo.zone, current_time)
+        stop_time = parse_local_time(stop_time_str, current_time.tzinfo.zone, current_time)
         return start_time <= current_time < stop_time
     # Case 2: Only start time is defined (turn on after start time)
     elif start_time_str is not None:
-        start_time = parse_local_time(start_time_str, current_time.tzinfo.zone)
+        start_time = parse_local_time(start_time_str, current_time.tzinfo.zone, current_time)
         return start_time <= current_time
     # Case 3: Only stop time is defined (turn on until stop time)
     elif stop_time_str is not None:
-        stop_time = parse_local_time(stop_time_str, current_time.tzinfo.zone)
+        stop_time = parse_local_time(stop_time_str, current_time.tzinfo.zone, current_time)
         return current_time < stop_time
     # Case 4: No time constraints defined
     return False
@@ -62,7 +62,7 @@ def determine_light_state(light, current_time, is_night, is_day):
     
     # Check if we're past the stop time (highest priority) - should always turn off after stop time
     if light.get('stop_time') is not None:
-        stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone)
+        stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
         logger.info(f"determine_light_state: checking stop_time={stop_time}, current >= stop? {current_time >= stop_time}")
         if current_time >= stop_time:
             logger.info("determine_light_state: returning False due to stop_time")
@@ -80,7 +80,7 @@ def determine_light_state(light, current_time, is_night, is_day):
         if is_night:
             # If only stop time is defined (no start time), use sunrise/sunset timing until stop time
             if light.get('stop_time') is not None:
-                stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone)
+                stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
                 result = current_time < stop_time
                 logger.info(f"determine_light_state: is_night=True, stop_time check result={result}")
                 return result
@@ -94,13 +94,13 @@ def determine_light_state(light, current_time, is_night, is_day):
     # Priority 3: Only explicit start time (turn on after start time)
     elif light.get('start_time') is not None:
         logger.info("determine_light_state: using only start_time")
-        start_time = parse_local_time(light['start_time'], current_time.tzinfo.zone)
+        start_time = parse_local_time(light['start_time'], current_time.tzinfo.zone, current_time)
         return start_time <= current_time
     
     # Priority 4: Only explicit stop time (turn on until stop time)
     elif light.get('stop_time') is not None:
         logger.info("determine_light_state: using only stop_time")
-        stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone)
+        stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone, current_time)
         return current_time < stop_time
     
     # Default: Light should be off
@@ -153,7 +153,7 @@ def get_light_settings(light, location, reservations, current_time):
         logger.info(f"Current local time: {current_time}")
         
         if stop_time:
-            parsed_stop_time = parse_local_time(stop_time, current_time.tzinfo.zone)
+            parsed_stop_time = parse_local_time(stop_time, current_time.tzinfo.zone, current_time)
             logger.info(f"Parsed stop time: {parsed_stop_time}")
             logger.info(f"Is current time >= stop time? {current_time >= parsed_stop_time}")
         

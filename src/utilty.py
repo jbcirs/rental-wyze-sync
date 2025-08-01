@@ -6,6 +6,7 @@ import json
 from logger import Logger
 from datetime import datetime, timedelta
 import pytz
+from pytz import AmbiguousTimeError, NonExistentTimeError
 
 logger = Logger()
 
@@ -43,21 +44,51 @@ def subtract_string_lists(list1, list2):
     result = list(set1 - set2)
     return result
 
-def parse_local_time(time_str, timezone):
+def parse_local_time(time_str, timezone, reference_time=None):
     """
     Parse a time string (HH:MM) into a timezone-aware datetime for today.
     
     Args:
         time_str: Time string in format "HH:MM"
         timezone: Timezone identifier or tzinfo object
+        reference_time: Optional timezone-aware datetime to use as reference for the date
         
     Returns:
         Timezone-aware datetime object for today with the specified time
     """
     local_timezone = pytz.timezone(timezone) if isinstance(timezone, str) else timezone
     time_parts = time_str.split(':')
-    now = datetime.now()
-    return local_timezone.localize(datetime(now.year, now.month, now.day, int(time_parts[0]), int(time_parts[1])))
+    
+    # Use reference_time if provided, otherwise use current time in the target timezone
+    if reference_time is not None and hasattr(reference_time, 'astimezone'):
+        # Convert reference time to the target timezone to get the correct date
+        local_ref = reference_time.astimezone(local_timezone)
+        naive_datetime = datetime(local_ref.year, local_ref.month, local_ref.day, int(time_parts[0]), int(time_parts[1]))
+        
+        try:
+            # Use localize with is_dst=None to raise an error if the time is ambiguous (DST transition)
+            return local_timezone.localize(naive_datetime, is_dst=None)
+        except pytz.AmbiguousTimeError:
+            # During DST transition, choose the earlier occurrence (before "fall back")
+            logger.warning(f"Ambiguous time {time_str} due to DST transition, using earlier occurrence")
+            return local_timezone.localize(naive_datetime, is_dst=True)
+        except pytz.NonExistentTimeError:
+            # During DST transition, time doesn't exist (during "spring forward")
+            logger.warning(f"Non-existent time {time_str} due to DST transition, using later occurrence")
+            return local_timezone.localize(naive_datetime, is_dst=False)
+    else:
+        # Fallback to current system time
+        now = datetime.now()
+        naive_datetime = datetime(now.year, now.month, now.day, int(time_parts[0]), int(time_parts[1]))
+        
+        try:
+            return local_timezone.localize(naive_datetime, is_dst=None)
+        except pytz.AmbiguousTimeError:
+            logger.warning(f"Ambiguous time {time_str} due to DST transition, using earlier occurrence")
+            return local_timezone.localize(naive_datetime, is_dst=True)
+        except pytz.NonExistentTimeError:
+            logger.warning(f"Non-existent time {time_str} due to DST transition, using later occurrence")
+            return local_timezone.localize(naive_datetime, is_dst=False)
 
 
 def validate_json(json_str):
