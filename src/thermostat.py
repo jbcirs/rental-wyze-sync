@@ -61,7 +61,7 @@ def get_comfortable_temperatures(mode, reservation=False, temperatures=None):
         default_temperatures = {
             'heat': {'cool_temp': 78, 'heat_temp': 74},
             'cool': {'cool_temp': 74, 'heat_temp': 68},
-            'auto': {'cool_temp': 74, 'heat_temp': 70}
+            'auto': {'cool_temp': 74, 'heat_temp': 69}
         }
     else:
         # Energy-saving settings when property is vacant
