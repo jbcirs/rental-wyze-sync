@@ -21,7 +21,7 @@ WYZE_API_DELAY_SECONDS = int(os.environ['WYZE_API_DELAY_SECONDS'])
 # Wyze API Constants
 WYZE_API_BASE_URL = "https://api.wyzecam.com"
 SV_GET_DEVICE_PROPERTY_LIST = '1df2807c63254e16a06213323fe8dec8'
-SV_GET_OBJECT_LIST = '9319141212e548888ae85cc9b33e32a7'
+SV_GET_OBJECT_LIST = 'c417b62d72ee44bf933054bdca183e77'
 
 logger = Logger()
 
@@ -61,26 +61,43 @@ def get_wyze_token():
         logger.error(f"Wyze API Error: {str(e)}")
         return None
 
-def wyze_api_call(endpoint: str, token: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def wyze_api_call(endpoint: str, token: str, data: Dict[str, Any] = None) -> Optional[Dict[str, Any]]:
     """
-    Make a direct API call to Wyze API.
+    Make a direct API call to Wyze API with common required parameters.
     
     Args:
         endpoint: API endpoint (e.g., '/app/v2/device/get_property_list')
         token: Access token
-        data: Request payload
+        data: Additional request payload data (optional)
         
     Returns:
         API response as dict, or None if failed
     """
     try:
         url = f"{WYZE_API_BASE_URL}{endpoint}"
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}"
+        
+        # Build payload with required common parameters based on working Postman example
+        payload = {
+            "access_token": token,
+            "app_name": "com.hualai",
+            "app_ver": "com.hualai___2.19.14",
+            "app_version": "2.19.14",
+            "phone_id": "0e78f2a0-8e04-4f47-89e9-c114d63f7d9e",
+            "phone_system_type": "2",
+            "sc": "a626948714654991afd3c0dbd7cdb901",
+            "ts": int(time.time() * 1000),  # Current timestamp in milliseconds
         }
         
-        response = requests.post(url, headers=headers, json=data, timeout=30)
+        # Add any additional data from the caller
+        if data:
+            payload.update(data)
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Connection": "keep-alive"
+        }
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         
         result = response.json()
@@ -111,8 +128,9 @@ def get_device_list_direct(token: str) -> Optional[list]:
         List of devices, or None if failed
     """
     try:
+        # Use the correct sv parameter for get_object_list endpoint
         data = {
-            "sv": SV_GET_OBJECT_LIST
+            "sv": "c417b62d72ee44bf933054bdca183e77"
         }
         
         response = wyze_api_call('/app/v2/home_page/get_object_list', token, data)
@@ -158,8 +176,8 @@ def get_device_property_list(client, device_mac: str, device_model: str):
     
     Args:
         client: Wyze API client (used to get token)
-        device_mac: Device MAC address
-        device_model: Device model
+        device_mac: Device MAC address (from device['mac'])
+        device_model: Device model (from device['product_model'])
         
     Returns:
         Dict containing property list response, or None if failed
@@ -171,6 +189,7 @@ def get_device_property_list(client, device_mac: str, device_model: str):
             logger.error("Unable to get Wyze token for property list API call")
             return None
         
+        # Build specific data for property list endpoint
         data = {
             "device_mac": device_mac,
             "device_model": device_model,
