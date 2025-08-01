@@ -3,6 +3,7 @@ non_prod = false
 local_development = false
 
 slack_channel = "#rentals"
+slack_errors_channel = "#rentals-errors"
 
 check_in_offset_hours = -1
 check_out_offset_hours = 1

@@ -1,11 +1,13 @@
 from logger import Logger
 import os
+from typing import List
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
 SLACK_CHANNEL = os.environ['SLACK_CHANNEL']
+SLACK_ERRORS_CHANNEL = os.environ['SLACK_ERRORS_CHANNEL']
 VAULT_URL = os.environ["VAULT_URL"]
 LOCAL_DEVELOPMENT = os.environ.get('LOCAL_DEVELOPMENT', 'false').lower() == 'true'
 
@@ -82,3 +84,36 @@ def send_summary_slack_message(property_name, deletions, updates, additions, err
     result = send_slack_message(message)
     if not result:
         logger.warning(f"Failed to send summary message for {property_name}")
+
+def send_config_error_message(property_name: str, errors: List[str]) -> bool:
+    """
+    Send a configuration validation error message to the dedicated errors channel.
+    
+    Args:
+        property_name: Name of the rental property with configuration errors
+        errors: List of validation error messages
+        
+    Returns:
+        Boolean indicating success or failure
+    """
+    logger.info(f"Preparing configuration error message for property: {property_name}")
+    
+    # Format the error message
+    message = f"🚨 **Configuration Validation Failed**\n"
+    message += f"**Property:** {property_name}\n"
+    message += f"**Error Count:** {len(errors)}\n\n"
+    message += "**Validation Errors:**\n"
+    
+    for i, error in enumerate(errors, 1):
+        message += f"{i}. `{error}`\n"
+    
+    message += f"\n❗ Property `{property_name}` has been **skipped** from processing until configuration is fixed."
+    
+    # Send to the dedicated errors channel
+    result = send_slack_message(message, channel=SLACK_ERRORS_CHANNEL)
+    if result:
+        logger.info(f"Configuration error notification sent for {property_name}")
+    else:
+        logger.error(f"Failed to send configuration error notification for {property_name}")
+    
+    return result

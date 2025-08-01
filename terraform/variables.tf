@@ -13,6 +13,11 @@ variable "slack_channel" {
   type = string
 }
 
+variable "slack_errors_channel" {
+  description = "The slack channel for configuration validation errors"
+  type = string
+}
+
 variable "check_in_offset_hours" {
   description = "Check in offset hours"
   type = number

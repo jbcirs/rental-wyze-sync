@@ -26,6 +26,7 @@ resource "azurerm_linux_function_app" "sync_locks_functions" {
     "PYTHON_ISOLATE_WORKER_DEPENDENCIES" = "1"
     VAULT_URL = azurerm_key_vault.key_vault.vault_uri
     SLACK_CHANNEL = var.slack_channel
+    SLACK_ERRORS_CHANNEL = var.slack_errors_channel
     CHECK_IN_OFFSET_HOURS = var.check_in_offset_hours
     CHECK_OUT_OFFSET_HOURS = var.check_out_offset_hours
     NON_PROD = var.non_prod
