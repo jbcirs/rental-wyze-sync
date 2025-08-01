@@ -224,7 +224,11 @@ def refresh_device_status(device_id):
             logger.info(f"🔄 Successfully sent refresh command to device {device_id}")
             return True
         else:
-            logger.warning(f"⚠️ Failed to send refresh command to device {device_id}. Status code: {response.status_code}")
+            # Log warning instead of error for 424 (device connectivity issues)
+            if response.status_code == 424:
+                logger.warning(f"⚠️ Device {device_id} is temporarily unavailable (424). This is usually a device connectivity issue.")
+            else:
+                logger.warning(f"⚠️ Failed to send refresh command to device {device_id}. Status code: {response.status_code}")
             logger.warning(f"Response: {response.text}")
             return False
     except Exception as e:

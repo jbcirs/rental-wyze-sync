@@ -58,26 +58,53 @@ def determine_light_state(light, current_time, is_night, is_day):
     Returns:
         Boolean indicating desired light state (True = on, False = off)
     """
-    # Check if we're past the stop time (highest priority)
+    logger.info(f"determine_light_state: current_time={current_time}, is_night={is_night}, is_day={is_day}")
+    
+    # Check if we're past the stop time (highest priority) - should always turn off after stop time
     if light.get('stop_time') is not None:
         stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone)
+        logger.info(f"determine_light_state: checking stop_time={stop_time}, current >= stop? {current_time >= stop_time}")
         if current_time >= stop_time:
+            logger.info("determine_light_state: returning False due to stop_time")
             return False
 
-    # Priority 1: Explicit start/stop time window
-    if light.get('start_time') is not None or light.get('stop_time') is not None:
-        if should_light_be_on(light.get('start_time'), light.get('stop_time'), current_time):
-            return True
+    # Priority 1: Explicit start/stop time window (both start and stop defined)
+    if light.get('start_time') is not None and light.get('stop_time') is not None:
+        logger.info("determine_light_state: using explicit start/stop time window")
+        return should_light_be_on(light.get('start_time'), light.get('stop_time'), current_time)
     
-    # Priority 2: Sunrise/sunset with offsets (if no explicit times or they don't apply)
-    # Light should be on if:
-    # - It's after (sunset - minutes_before_sunset) AND before (sunrise + minutes_after_sunrise)
-    # - OR if explicit times override this
+    # Priority 2: Sunrise/sunset with offsets combined with stop time
     if light.get('minutes_before_sunset') is not None or light.get('minutes_after_sunrise') is not None:
-        # If we have sunrise/sunset settings, use the calculated is_night (which includes offsets)
-        return is_night
+        logger.info("determine_light_state: using sunrise/sunset with offsets")
+        # Use sunset/sunrise timing, but respect stop time if defined
+        if is_night:
+            # If only stop time is defined (no start time), use sunrise/sunset timing until stop time
+            if light.get('stop_time') is not None:
+                stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone)
+                result = current_time < stop_time
+                logger.info(f"determine_light_state: is_night=True, stop_time check result={result}")
+                return result
+            else:
+                logger.info("determine_light_state: is_night=True, no stop_time, returning True")
+                return True
+        else:
+            logger.info("determine_light_state: is_night=False, returning False")
+            return False
+    
+    # Priority 3: Only explicit start time (turn on after start time)
+    elif light.get('start_time') is not None:
+        logger.info("determine_light_state: using only start_time")
+        start_time = parse_local_time(light['start_time'], current_time.tzinfo.zone)
+        return start_time <= current_time
+    
+    # Priority 4: Only explicit stop time (turn on until stop time)
+    elif light.get('stop_time') is not None:
+        logger.info("determine_light_state: using only stop_time")
+        stop_time = parse_local_time(light['stop_time'], current_time.tzinfo.zone)
+        return current_time < stop_time
     
     # Default: Light should be off
+    logger.info("determine_light_state: no conditions met, returning False")
     return False
 
 def get_light_settings(light, location, reservations, current_time):
@@ -114,6 +141,22 @@ def get_light_settings(light, location, reservations, current_time):
         logger.info(f"is_night_time (with offsets): {is_night_time}")
         logger.info(f"is_day_time (with offsets): {is_day_time}")
         
+        # Get light configuration details for debugging
+        start_time = light.get('start_time')
+        stop_time = light.get('stop_time')
+        minutes_before_sunset_cfg = light.get('minutes_before_sunset')
+        minutes_after_sunrise_cfg = light.get('minutes_after_sunrise')
+        
+        logger.info(f"Light config - start_time: {start_time}, stop_time: {stop_time}, sunset_offset: {minutes_before_sunset_cfg}, sunrise_offset: {minutes_after_sunrise_cfg}")
+        
+        # Log current time for debugging
+        logger.info(f"Current local time: {current_time}")
+        
+        if stop_time:
+            parsed_stop_time = parse_local_time(stop_time, current_time.tzinfo.zone)
+            logger.info(f"Parsed stop time: {parsed_stop_time}")
+            logger.info(f"Is current time >= stop time? {current_time >= parsed_stop_time}")
+        
         # Process based on when this light should operate
         if light['when'] == When.RESERVATIONS_ONLY.value:
             # Only consider turning on light during active reservations
@@ -126,7 +169,7 @@ def get_light_settings(light, location, reservations, current_time):
                     if checkin_time <= current_time < checkout_time:
                         light_state = determine_light_state(light, current_time, is_night_time, is_day_time)
                         change_state = True
-                        logger.info(f"During reservation: light should be {'ON' if light_state else 'OFF'}")
+                        logger.info(f"During reservation: light determined state = {light_state} ({'ON' if light_state else 'OFF'})")
                         break
                 if not change_state:
                     logger.info("No active reservations - light should be OFF")
