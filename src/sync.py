@@ -408,7 +408,7 @@ def process_property_thermostats(
                 logger.info(f"checkout_time: {checkout_time.date()}")
 
                 # Check if current date falls within reservation period
-                if checkin_time.date() <= current_time.date() < checkout_time.date():
+                if checkin_time.date() <= current_time.date() <= checkout_time.date():
                     filtered_thermostat = filter_by_key(thermostat, "temperatures", When.RESERVATIONS_ONLY.value)
                     has_reservation = True
                     reservation_start_date = checkin_time.date()
