@@ -1,6 +1,8 @@
 import os
 import requests
 import time
+import pytz
+from datetime import datetime
 from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 from logger import Logger
@@ -125,25 +127,44 @@ def get_weather_forecast(latitude, longitude, retries=3):
             current_temperature = current_forecast['temperature']
             temperature_unit = current_forecast['temperatureUnit']
 
-            temperature_min = None
-            temperature_max = None
-
-            # Loop through the periods to find today's min and max temperatures
+            # Find the absolute min and max temperatures for today across all periods
+            # This ensures we get consistent daily high/low regardless of what time we pull the forecast
+            today_temperatures = []
+            
+            # Get current date in the local timezone to properly identify today's periods
+            # Use the TIMEZONE environment variable for consistency with the rest of the app
+            local_tz = pytz.timezone(os.environ.get('TIMEZONE', 'UTC'))
+            current_local_time = datetime.now(local_tz)
+            today_date = current_local_time.strftime('%Y-%m-%d')
+            
+            logger.info(f"Looking for periods on date: {today_date} (local timezone: {local_tz})")
+            
+            # Loop through all periods and collect temperatures for today
             for period in forecast_data['properties']['periods']:
-                if 'Today' in period['name'] or 'This Afternoon' in period['name']:
-                    temperature_max = period['temperature']
-                if 'Tonight' in period['name']:
-                    temperature_min = period['temperature']
+                period_start = period['startTime']
+                # Extract date from ISO format (e.g., "2025-08-07T14:00:00-05:00")
+                period_date = period_start.split('T')[0]
+                
+                logger.info(f"Period: {period['name']} | Date: {period_date} | Temp: {period['temperature']}°{temperature_unit}")
+                
+                # Include this period if it's for today
+                if period_date == today_date:
+                    today_temperatures.append(period['temperature'])
+            
+            # Calculate min and max from all today's temperatures
+            if today_temperatures:
+                temperature_min = min(today_temperatures)
+                temperature_max = max(today_temperatures)
+                logger.info(f"Found {len(today_temperatures)} periods for today with temperatures: {today_temperatures}")
+            else:
+                # Fallback: if we can't find today's periods, use current temperature
+                logger.warning("Could not find periods for today, using current temperature as fallback")
+                temperature_min = current_temperature
+                temperature_max = current_temperature
 
             logger.info(f"Current Temperature: {current_temperature} {temperature_unit}")
-            logger.info(f"Min Temperature Today: {temperature_min} {temperature_unit}")
-            logger.info(f"Max Temperature Today: {temperature_max} {temperature_unit}")
-
-            # If min/max is not found, return current_temperature
-            if temperature_min is None:
-                temperature_min = current_temperature
-            if temperature_max is None:
-                temperature_max = current_temperature
+            logger.info(f"Daily Min Temperature: {temperature_min} {temperature_unit}")
+            logger.info(f"Daily Max Temperature: {temperature_max} {temperature_unit}")
 
             return current_temperature, temperature_min, temperature_max
         
